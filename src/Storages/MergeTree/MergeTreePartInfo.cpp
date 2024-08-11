@@ -195,6 +195,7 @@ String MergeTreePartInfo::getPartNameForLogs() const
     return getPartNameV1();
 }
 
+// partitionid_minblock_maxblock_level
 String MergeTreePartInfo::getPartNameV1() const
 {
     WriteBufferFromOwnString wb;
@@ -224,7 +225,7 @@ String MergeTreePartInfo::getPartNameV1() const
     return wb.str();
 }
 
-
+// leftdate_rightdate_minblock_maxblock_level
 String MergeTreePartInfo::getPartNameV0(DayNum left_date, DayNum right_date) const
 {
     const auto & date_lut = DateLUT::serverTimezoneInstance();

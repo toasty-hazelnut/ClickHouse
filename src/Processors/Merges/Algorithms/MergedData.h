@@ -26,6 +26,7 @@ public:
     {
     }
 
+    // 这里source_columns的作用仅仅是看有没有 hasDynamicStructure. 如果没有，则source_columns似乎没起作用
     virtual void initialize(const Block & header, const IMergingAlgorithm::Inputs & inputs)
     {
         columns = header.cloneEmptyColumns();
@@ -49,13 +50,17 @@ public:
     }
 
     /// Pull will be called at next prepare call.
+    // ?
     void flush() { need_flush = true; }
 
+    // using ColumnRawPtrs = std::vector<const IColumn *>; see IColumn.h
     void insertRow(const ColumnRawPtrs & raw_columns, size_t row, size_t block_size)
     {
         size_t num_columns = raw_columns.size();
         chassert(columns.size() == num_columns);
         for (size_t i = 0; i < num_columns; ++i)
+            // MutableColumns columns
+            //相当于 using MutableColumns = std::vector<IColumn::MutablePtr>;
             columns[i]->insertFrom(*raw_columns[i], row);
 
         ++total_merged_rows;
@@ -80,6 +85,7 @@ public:
         sum_blocks_granularity += (block_size * length);
     }
 
+    // 插入rows_size这么多行
     void insertChunk(Chunk && chunk, size_t rows_size)
     {
         if (merged_rows)
@@ -113,6 +119,7 @@ public:
             }
         }
 
+        // 先整个'插入'，再pop
         if (rows_size < num_rows)
         {
             size_t pop_size = num_rows - rows_size;
@@ -134,12 +141,14 @@ public:
             empty_columns.emplace_back(column->cloneEmpty());
 
         empty_columns.swap(columns);
+        // 为何要这样swap一下？
         Chunk chunk(std::move(empty_columns), merged_rows);
 
         merged_rows = 0;
         sum_blocks_granularity = 0;
         ++total_chunks;
         total_allocated_bytes += chunk.bytes();
+
         need_flush = false;
 
         return chunk;
@@ -149,6 +158,7 @@ public:
     {
         /// If full chunk was or is going to be inserted, then we must pull it.
         /// It is needed for fast-forward optimization.
+        // 猜测对应 insertChunk的情况
         if (need_flush)
             return true;
 

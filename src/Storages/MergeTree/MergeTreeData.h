@@ -1508,6 +1508,8 @@ protected:
             const DiskPtr disk;
 
             bool is_loaded = false;
+
+            // children是在何时设置的？ 是否是merge时设置的？
             std::map<MergeTreePartInfo, std::shared_ptr<Node>> children;
         };
 

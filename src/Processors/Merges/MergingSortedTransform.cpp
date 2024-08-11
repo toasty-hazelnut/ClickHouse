@@ -8,6 +8,9 @@
 namespace DB
 {
 
+// header, pipes.size(), sort_description, merge_block_size_rows, merge_block_size_bytes, SortingQueueStrategy::Default, 
+// 0, false (always_read_till_end_), ctx->rows_sources_write_buf.get(), true, ctx->blocks_are_granules_size,
+// having_all_inputs 未提供  默认是true
 MergingSortedTransform::MergingSortedTransform(
     const Block & header,
     size_t num_inputs,

@@ -66,6 +66,7 @@ struct SortCursorImpl
     /** We could use SortCursorImpl in case when columns aren't sorted
       *  but we have their sorted permutation
       */
+      //
     IColumn::Permutation * permutation = nullptr;
 
 #if USE_EMBEDDED_COMPILER
@@ -80,6 +81,7 @@ struct SortCursorImpl
         reset(block, perm);
     }
 
+    // MergingSortedAlgorithm中，传进来的order为source_num，即可理解为每个input的在inputs中的序号
     SortCursorImpl(
         const Block & header,
         const Columns & columns,
@@ -111,7 +113,8 @@ struct SortCursorImpl
             all_columns.push_back(columns[j].get());
 
         for (size_t j = 0, size = desc.size(); j < size; ++j)
-        {
+        {   
+            // 推测， sort_columns指哪些是 SortDescription中包含的columns
             auto & column_desc = desc[j];
             size_t column_number = block.getPositionByName(column_desc.column_name);
             sort_columns.push_back(columns[column_number].get());
@@ -124,11 +127,13 @@ struct SortCursorImpl
             has_collation |= need_collation[j];
         }
 
+        // 
         pos = 0;
         rows = all_columns[0]->size();
         permutation = perm;
     }
 
+    // 如果有permutation, 
     size_t getRow() const
     {
         if (permutation)
@@ -361,6 +366,7 @@ public:
             queue.emplace_back(&cursors[i]);
         }
 
+        // std::make_heap
         std::make_heap(queue.begin(), queue.end());
 
         if constexpr (strategy == SortingQueueStrategy::Batch)
@@ -465,7 +471,8 @@ private:
     size_t batch_size = 0;
 
     size_t ALWAYS_INLINE nextChildIndex()
-    {
+    {   
+        // 何时next_child_idx为0？  
         if (next_child_idx == 0)
         {
             next_child_idx = 1;

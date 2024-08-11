@@ -39,6 +39,7 @@ private:
 };
 
 /// Types of data part storage format.
+// ?
 class MergeTreeDataPartStorageType
 {
 public:

@@ -20,6 +20,8 @@ public:
     /// - Determine (estimate) for each equal range the cardinality of each non-sorting-key column.
     /// - The simple heuristics applied is that non-sorting key columns will be sorted (within each equal range) in order of ascending
     ///   cardinality. This maximizes the length of equal-value runs within the non-sorting-key columns, leading to better compressability.
+
+    // in order of ascending cardinality?
     static void optimize(const Block & block, const SortDescription & sort_description, IColumn::Permutation & permutation);
 };
 

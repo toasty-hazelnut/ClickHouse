@@ -200,7 +200,7 @@ void MergeTreeDataWriter::TemporaryPart::finalize()
     for (auto & stream : streams)
         stream.finalizer.finish();
 
-    part->getDataPartStorage().precommitTransaction();
+    part->getDataPartStorage().precommitTransaction();  // precommit ..
     for (const auto & [_, projection] : part->getProjectionParts())
         projection->getDataPartStorage().precommitTransaction();
 }
@@ -518,6 +518,7 @@ MergeTreeDataWriter::TemporaryPart MergeTreeDataWriter::writeTempPartImpl(
             perm_ptr = &perm;
         }
         else
+            // already sorted
             ProfileEvents::increment(ProfileEvents::MergeTreeDataWriterBlocksAlreadySorted);
     }
 
@@ -540,7 +541,7 @@ MergeTreeDataWriter::TemporaryPart MergeTreeDataWriter::writeTempPartImpl(
 
     /// If optimize_on_insert is true, block may become empty after merge. There
     /// is no need to create empty part. Since expected_size could be zero when
-    /// part only contains empty tuples. As a result, check rows instead.
+    /// part only contains empty tuples. As a result, check rows instead. 根据rows来判断是否block become empty了
     if (block.rows() == 0)
         return temp_part;
 
@@ -553,6 +554,7 @@ MergeTreeDataWriter::TemporaryPart MergeTreeDataWriter::writeTempPartImpl(
     VolumePtr volume = data.getStoragePolicy()->getVolume(0);
     VolumePtr data_part_volume = createVolumeFromReservation(reservation, volume);
 
+    // build()返回 make_shared<MergeTreeDataPartWide> 或 make_shared<MergeTreeDataPartCompact>
     auto new_data_part = data.getDataPartBuilder(part_name, data_part_volume, part_dir)
         .withPartFormat(data.choosePartFormat(expected_size, block.rows()))
         .withPartInfo(new_part_info)
@@ -575,6 +577,8 @@ MergeTreeDataWriter::TemporaryPart MergeTreeDataWriter::writeTempPartImpl(
     new_data_part->existing_rows_count = block.rows();
     new_data_part->partition = std::move(partition);
     new_data_part->minmax_idx = std::move(minmax_idx);
+
+    // is_temp ...
     new_data_part->is_temp = true;
     /// In case of replicated merge tree with zero copy replication
     /// Here Clickhouse claims that this new part can be deleted in temporary state without unlocking the blobs
@@ -587,6 +591,7 @@ MergeTreeDataWriter::TemporaryPart MergeTreeDataWriter::writeTempPartImpl(
         /// The name could be non-unique in case of stale files from previous runs.
         String full_path = new_data_part->getDataPartStorage().getFullPath();
 
+        // 为何会exists？ 这个exists是完全同名 还是带tmp_的？
         if (new_data_part->getDataPartStorage().exists())
         {
             LOG_WARNING(log, "Removing old temporary directory {}", full_path);

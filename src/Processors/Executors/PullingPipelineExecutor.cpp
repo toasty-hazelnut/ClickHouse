@@ -19,6 +19,7 @@ PullingPipelineExecutor::PullingPipelineExecutor(QueryPipeline & pipeline_) : pi
     if (!pipeline.pulling())
         throw Exception(ErrorCodes::LOGICAL_ERROR, "Pipeline for PullingPipelineExecutor must be pulling");
 
+    // PullingOutputFormat内部的 has_data_flag
     pulling_format = std::make_shared<PullingOutputFormat>(pipeline.output->getHeader(), has_data_flag);
     pipeline.complete(pulling_format);
 }
@@ -40,8 +41,10 @@ const Block & PullingPipelineExecutor::getHeader() const
     return pulling_format->getPort(IOutputFormat::PortKind::Main).getHeader();
 }
 
+/// Methods return false if query is finished.
 bool PullingPipelineExecutor::pull(Chunk & chunk)
-{
+{   
+    // 构建executor
     if (!executor)
     {
         executor = std::make_shared<PipelineExecutor>(pipeline.processors, pipeline.process_list_element);
@@ -50,7 +53,20 @@ bool PullingPipelineExecutor::pull(Chunk & chunk)
 
     if (!executor->checkTimeLimitSoft())
         return false;
+    
+    // from PipelineExecutor::executeStep
+    /// Execute single step. Step will be stopped when yield_flag is true.
+    /// Execution is happened in a single thread.
+    /// Return true if execution should be continued.
 
+    // bool PipelineExecutor::executeStep(std::atomic_bool * yield_flag)
+    // has_data_flag即为
+
+    // 这里的executor->executeStep()应该返回true，从而pull(chunk)能pull到chunk，pull(block)返回true，
+    // 从而MergeTask::ExecuteAndFinalizeHorizontalPart::execute会继续执行多次
+
+    // 注意区分 yield_flag 和 executeStep的返回值。
+    // yield_flag为true时 executeStep会返回。 但executeStep的返回值为true/false 取决于tasks.isFinished()
     if (!executor->executeStep(&has_data_flag))
         return false;
 
@@ -58,13 +74,15 @@ bool PullingPipelineExecutor::pull(Chunk & chunk)
     return true;
 }
 
+/// Methods return false if query is finished.
 bool PullingPipelineExecutor::pull(Block & block)
 {
     Chunk chunk;
 
     if (!pull(chunk))
         return false;
-
+    
+    // pull(chunk)返回true，但chunk为空。 如果chunk为空，为何返回true？
     if (!chunk)
     {
         /// In case if timeout exceeded.

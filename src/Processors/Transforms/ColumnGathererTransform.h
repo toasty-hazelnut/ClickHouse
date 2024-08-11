@@ -11,7 +11,7 @@ namespace Poco { class Logger; }
 namespace DB
 {
 
-
+// 
 /// Tiny struct, stores number of a Part from which current row was fetched, and insertion flag.
 struct RowSourcePart
 {
@@ -170,6 +170,7 @@ void ColumnGathererStream::gather(Column & column_res)
 
         /// Consecutive optimization. TODO: precompute lengths
         size_t len = 1;
+        // 为何会出现 前者小于后者的情况？
         size_t max_len = std::min(static_cast<size_t>(row_sources_end - row_source_pos), source.size - source.pos); // interval should be in the same block
 
         while (len < max_len && row_source_pos->data == row_source.data)
@@ -187,6 +188,7 @@ void ColumnGathererStream::gather(Column & column_res)
             {
                 /// If current block already contains data, return it.
                 /// Whole column from current source will be returned on next read() iteration.
+                // 
                 source_to_fully_copy = &source;
                 return;
             }

@@ -695,6 +695,8 @@ using ColumnPtr = IColumn::Ptr;
 using MutableColumnPtr = IColumn::MutablePtr;
 using Columns = std::vector<ColumnPtr>;
 using MutableColumns = std::vector<MutableColumnPtr>;
+//相当于 using MutableColumns = std::vector<IColumn::MutablePtr>;
+// Columns相当于 vector<IColumn:Ptr>
 
 using ColumnRawPtrs = std::vector<const IColumn *>;
 

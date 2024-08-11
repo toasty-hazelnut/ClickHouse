@@ -16,6 +16,7 @@ PullingOutputFormat::PullingOutputFormat(const Block & header, std::atomic_bool 
     , has_data_flag(consume_data_flag_)
 {}
 
+//
 void PullingOutputFormat::consume(Chunk chunk)
 {
     if (data)
@@ -28,6 +29,7 @@ void PullingOutputFormat::consume(Chunk chunk)
     has_data_flag = true;
 }
 
+// 可看下在哪调用getChunk 。。。
 Chunk PullingOutputFormat::getChunk()
 {
     auto chunk = std::move(data);

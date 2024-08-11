@@ -55,6 +55,8 @@ protected:
     {
     public:
 
+        // State有私有成员 atomic<Data *> data
+        
         struct Data
         {
             /// Note: std::variant can be used. But move constructor for it can't be inlined.
@@ -147,6 +149,7 @@ protected:
             delete expected;
         }
 
+        // push
         void ALWAYS_INLINE push(DataPtr & data_, std::uintptr_t & flags)
         {
             flags = data_.swap(data, HAS_DATA, HAS_DATA);

@@ -49,6 +49,7 @@ void IMergingTransformBase::onNewInput()
     throw Exception(ErrorCodes::NOT_IMPLEMENTED, "onNewInput is not implemented for {}", getName());
 }
 
+// 简单merge场景，似乎不会调这个。因为have_all_inputs构造时为true
 void IMergingTransformBase::addInput()
 {
     if (have_all_inputs)
@@ -66,15 +67,28 @@ void IMergingTransformBase::setHaveAllInputs()
     have_all_inputs = true;
 }
 
+/*
+inputs为 InputPorts类型
+IMergingTransformBase : IProcessor 
+InputPorts inputs是IProcessor的成员变量
+
+vector<InputState> input_states
+InputState = InputPort + is_initialized
+
+state: 
+*/
+// 被prepare调用
 IProcessor::Status IMergingTransformBase::prepareInitializeInputs()
 {
     /// Add information about inputs.
+    // input_states: vector<InputState>
     if (input_states.empty())
     {
         input_states.reserve(inputs.size());
         for (auto & input : inputs)
             input_states.emplace_back(input);
-
+        
+        // 之后会设置state.init_chunks
         state.init_chunks.resize(inputs.size());
     }
 
@@ -116,6 +130,7 @@ IProcessor::Status IMergingTransformBase::prepareInitializeInputs()
             continue;
         }
 
+        // 设置state.init_chunks
         state.init_chunks[i].set(std::move(chunk));
         input_states[i].is_initialized = true;
     }
@@ -127,11 +142,16 @@ IProcessor::Status IMergingTransformBase::prepareInitializeInputs()
     return Status::Ready;
 }
 
+// 去override IProcessor的prepare()
+// prepare()是被谁调的？
+// next_input_to_read是如何设置的？ 
 IProcessor::Status IMergingTransformBase::prepare()
-{
+{   
+    // 简单merge场景，构造时have_all_inputs为true
     if (!have_all_inputs)
         return Status::NeedData;
-
+    
+    // OutputPort类型
     auto & output = outputs.front();
 
     /// Special case for no inputs.
@@ -160,6 +180,7 @@ IProcessor::Status IMergingTransformBase::prepare()
     if ((state.output_chunk || !state.output_chunk.getChunkInfos().empty()) && !is_port_full)
         output.push(std::move(state.output_chunk));
 
+    // 第一次的时候调prepareInitializeInputs, 之后is_initialized似乎一直是true
     if (!is_initialized)
         return prepareInitializeInputs();
 
@@ -192,6 +213,7 @@ IProcessor::Status IMergingTransformBase::prepare()
         return Status::Finished;
     }
 
+    // 只会读一个input的？
     if (state.need_data)
     {
         auto & input = input_states[state.next_input_to_read].port;
@@ -201,7 +223,8 @@ IProcessor::Status IMergingTransformBase::prepare()
 
             if (!input.hasData())
                 return Status::NeedData;
-
+            
+            // pull
             state.input_chunk.set(input.pull());
             if (!state.input_chunk.chunk.hasRows() && !input.isFinished())
                 return Status::NeedData;

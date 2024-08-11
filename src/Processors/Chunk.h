@@ -125,6 +125,7 @@ public:
     void append(const Chunk & chunk, size_t from, size_t length); // append rows [from, from+length) of chunk
 
 private:
+    // Columns 相当于 vector<IColumn::Ptr>
     Columns columns;
     UInt64 num_rows = 0;
     ChunkInfoCollection chunk_infos;

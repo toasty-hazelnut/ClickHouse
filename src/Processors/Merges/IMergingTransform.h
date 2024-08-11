@@ -27,6 +27,7 @@ public:
         UInt64 limit_hint_,
         bool always_read_till_end_);
 
+    // outputs为IProcessor中的成员 OutputPorts outputs;
     OutputPort & getOutputPort() { return outputs.front(); }
 
     /// Methods to add additional input port. It is possible to do only before the first call of `prepare`.
@@ -79,13 +80,26 @@ template <typename Algorithm>
 class IMergingTransform : public IMergingTransformBase
 {
 public:
+    // MergingSortedTransform中 调用的是这个构造函数 （所以empty_chunk_on_finish的值应该是默认的false ）
+    /* 猜测，MergingSortedTransform中  传给MergingSortedTransform中的后面的参数  header,
+        num_inputs,
+        description_,
+        max_block_size_rows,
+        max_block_size_bytes,
+        sorting_queue_strategy,
+        limit_,
+        out_row_sources_buf_,
+        use_average_block_sizes   
+        对应  Args && ... args ？
+        作为MergingSortedAlgorithm构造函数的参数？
+    */
     template <typename ... Args>
     IMergingTransform(
         size_t num_inputs,
         const Block & input_header,
         const Block & output_header,
         bool have_all_inputs_,
-        UInt64 limit_hint_,
+        UInt64 limit_hint_,             // 0
         bool always_read_till_end_,
         Args && ... args)
         : IMergingTransformBase(num_inputs, input_header, output_header, have_all_inputs_, limit_hint_, always_read_till_end_)
@@ -108,15 +122,23 @@ public:
     {
     }
 
+    // override IProcessor的work()
+    // work调用后，谁来继续调其他的比如prepare?
+
+    // override IProcessor的work
     void work() override
     {
         if (!state.init_chunks.empty())
+            // 见MergingSortedAlgorithm.cpp
             algorithm.initialize(std::move(state.init_chunks));
 
+        // init_chunks后，还会有state.has_input吗？ 猜测会，某个part的一个block处理完 要处理下一个block时
         if (state.has_input)
         {
             // std::cerr << "Consume chunk with " << state.input_chunk.getNumRows()
             //           << " for input " << state.next_input_to_read << std::endl;
+            // 
+            // 从algorithm.consume的定义看，next_input_to_read 似乎是指从哪个part (input) 去读下一个block/chunk
             algorithm.consume(state.input_chunk, state.next_input_to_read);
             state.has_input = false;
         }
@@ -127,6 +149,8 @@ public:
             state.no_data = false;
         }
 
+        // merge
+        // status -> state. status反映在state中
         IMergingAlgorithm::Status status = algorithm.merge();
 
         if ((status.chunk && status.chunk.hasRows()) || !status.chunk.getChunkInfos().empty())

@@ -30,6 +30,7 @@ MergingSortedAlgorithm::MergingSortedAlgorithm(
     sort_description_types.reserve(description.size());
 
     /// Replace column names in description to positions.
+    // ？
     for (const auto & column_description : description)
     {
         has_collation |= column_description.collator != nullptr;
@@ -53,15 +54,18 @@ void MergingSortedAlgorithm::initialize(Inputs inputs)
     merged_data.initialize(header, inputs);
     current_inputs = std::move(inputs);
 
+    // 初始化cursors
     for (size_t source_num = 0; source_num < current_inputs.size(); ++source_num)
     {
         auto & chunk = current_inputs[source_num].chunk;
         if (!chunk)
             continue;
-
+        
+        // source_num为这个cursor的order值
         cursors[source_num] = SortCursorImpl(header, chunk.getColumns(), description, source_num);
     }
 
+    // ?语法
     if (sorting_queue_strategy == SortingQueueStrategy::Default)
     {
         queue_variants.callOnVariant([&](auto & queue)
@@ -80,10 +84,13 @@ void MergingSortedAlgorithm::initialize(Inputs inputs)
     }
 }
 
+
+// 猜测是某个part的一个block读完了，去读下一个block 也就是新的input
 void MergingSortedAlgorithm::consume(Input & input, size_t source_num)
 {
     removeConstAndSparse(input);
     current_inputs[source_num].swap(input);
+    //  Set the cursor to the beginning of the new block.
     cursors[source_num].reset(current_inputs[source_num].chunk.getColumns(), header);
 
     if (sorting_queue_strategy == SortingQueueStrategy::Default)
@@ -102,10 +109,13 @@ void MergingSortedAlgorithm::consume(Input & input, size_t source_num)
     }
 }
 
+// queue指？？？ 其类型是？
+// 似乎是SortingQueueImpl<Cursor, SortingQueueStrategy::Default>;  见SortCursor.h
+
 IMergingAlgorithm::Status MergingSortedAlgorithm::merge()
 {
     if (sorting_queue_strategy == SortingQueueStrategy::Default)
-    {
+    {   // 普通merge用的是Default
         IMergingAlgorithm::Status result = queue_variants.callOnVariant([&](auto & queue)
         {
             return mergeImpl(queue);
@@ -122,6 +132,13 @@ IMergingAlgorithm::Status MergingSortedAlgorithm::merge()
     return result;
 }
 
+/*
+哪些情况会返回：
+merge出了一个chunk；
+队首的chunk耗尽了；
+
+
+*/  
 template <typename TSortingHeap>
 IMergingAlgorithm::Status MergingSortedAlgorithm::mergeImpl(TSortingHeap & queue)
 {
@@ -129,15 +146,16 @@ IMergingAlgorithm::Status MergingSortedAlgorithm::mergeImpl(TSortingHeap & queue
     while (queue.isValid())
     {
         if (merged_data.hasEnoughRows())
-            return Status(merged_data.pull());
-
+            return Status(merged_data.pull());      // Status(Chunk chunk);
+        
+        // queue.current()就是队首的
         auto current = queue.current();
 
         if (current.impl->isLast() && current_inputs[current.impl->order].skip_last_row)
         {
             /// Get the next block from the corresponding source, if there is one.
             queue.removeTop();
-            return Status(current.impl->order);
+            return Status(current.impl->order);     // Status(required_source)  requried_source在哪里被用到？
         }
 
         if (current.impl->isFirst()
@@ -149,19 +167,22 @@ IMergingAlgorithm::Status MergingSortedAlgorithm::mergeImpl(TSortingHeap & queue
               * We want to insert current cursor chunk directly in merged data.
               *
               * First if merged_data is not empty we need to flush it.
-              * We will get into the same condition on next mergeBatch call.
+              * We will get into the same condition on next mergeBatch call.   是的
               *
               * Then we can insert chunk directly in merged data.
               */
-
+            // current.impl->isFirst时，是有可能出现merged_data非空的 （例如，上一次因为队首chunk耗尽了 于是merge结束运行了 但只是reutrn Status(required_source)，不会return Status(chunk, required_source)）
             if (merged_data.mergedRows() != 0)
-                return Status(merged_data.pull());
+                return Status(merged_data.pull());      // Status(chunk)
 
             /// Actually, current.impl->order stores source number (i.e. cursors[current.impl->order] == current.impl)
             size_t source_num = current.impl->order;
 
             auto chunk_num_rows = current_inputs[source_num].chunk.getNumRows();
 
+            // 按上面的逻辑 if(merged_data.mergedRows() != 0), 这里mergedRows一定等于0
+            // 所以只是check 这个chunk 是否大于limit？
+            // 但为何变量名叫total_merged_rows_after_insertion? 而且下面根据limit_reached设置 status中的is_finished？？？
             UInt64 total_merged_rows_after_insertion = merged_data.mergedRows() + chunk_num_rows;
             bool limit_reached = limit && total_merged_rows_after_insertion >= limit;
 
@@ -176,6 +197,7 @@ IMergingAlgorithm::Status MergingSortedAlgorithm::mergeImpl(TSortingHeap & queue
             {
                 RowSourcePart row_source(source_num);
                 for (size_t i = 0; i < chunk_num_rows; ++i)
+                    // 写同样的row_source.data
                     out_row_sources_buf->write(row_source.data);
             }
 
@@ -190,6 +212,8 @@ IMergingAlgorithm::Status MergingSortedAlgorithm::mergeImpl(TSortingHeap & queue
             return status;
         }
 
+        // 插入single row
+        // all_columns？ 似乎同input.chunk.getColumns    看下vertical merge中的input是啥。。。
         merged_data.insertRow(current->all_columns, current->getRow(), current->rows);
 
         if (out_row_sources_buf)
@@ -209,7 +233,7 @@ IMergingAlgorithm::Status MergingSortedAlgorithm::mergeImpl(TSortingHeap & queue
         {
             /// We will get the next block from the corresponding source, if there is one.
             queue.removeTop();
-            return Status(current.impl->order);
+            return Status(current.impl->order);     // 此时没有chunk，只是required_source
         }
     }
 

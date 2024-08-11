@@ -49,6 +49,7 @@ public:
     ProfileInfo & getProfileInfo();
 
 private:
+    // has_data_flag
     std::atomic_bool has_data_flag = false;
     QueryPipeline & pipeline;
     std::shared_ptr<PullingOutputFormat> pulling_format;

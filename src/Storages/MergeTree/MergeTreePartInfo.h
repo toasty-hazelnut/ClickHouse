@@ -17,7 +17,7 @@ namespace DB
 {
 
 /// Information about partition and the range of blocks contained in the part.
-/// Allows determining if parts are disjoint or one part fully contains the other.
+/// Allows determining if parts are disjoint or one part fully contains the other.   
 struct MergeTreePartInfo
 {
     String partition_id;
@@ -40,6 +40,7 @@ struct MergeTreePartInfo
     {
     }
 
+    // tuple的比较 short-circuited
     bool operator<(const MergeTreePartInfo & rhs) const
     {
         return std::forward_as_tuple(partition_id, min_block, max_block, level, mutation)
@@ -56,15 +57,24 @@ struct MergeTreePartInfo
         return *this < rhs || rhs < *this;
     }
 
+    // ...
     /// Get block number that can be used to determine which mutations we still need to apply to this part
     /// (all mutations with version greater than this block number).
     Int64 getDataVersion() const { return mutation ? mutation : min_block; }
 
     /// True if contains rhs (this part is obtained by merging rhs with some other parts or mutating rhs)
+    
+    // 似乎mutation时，mutation是max_block + 1？？？  再看下
     bool contains(const MergeTreePartInfo & rhs) const
     {
-        /// Containing part may have equal level iff block numbers are equal (unless level is MAX_LEVEL)
+        /// Containing part may have equal level iff block numbers are equal (unless level is MAX_LEVEL) ***
         /// (e.g. all_0_5_2 does not contain all_0_4_2, but all_0_5_3 or all_0_4_2_9 do)
+        // 似乎在一个partition中，0_5_2和0_4_2不可能同时出现
+
+        // 关于mutation:
+        // 0_4_2_9  0_4_2 ...
+
+        // ( MAX_LEVEL是多少？
         bool strictly_contains_block_range = (min_block == rhs.min_block && max_block == rhs.max_block) || level > rhs.level
             || level == MAX_LEVEL || level == LEGACY_MAX_LEVEL;
         return partition_id == rhs.partition_id        /// Parts for different partitions are not merged
@@ -76,6 +86,7 @@ struct MergeTreePartInfo
     }
 
     /// Part was created with mutation of parent_candidate part
+    // 其他都相等，只有mutation大于
     bool isMutationChildOf(const MergeTreePartInfo & parent_candidate) const
     {
         return partition_id == parent_candidate.partition_id
@@ -126,6 +137,7 @@ struct MergeTreePartInfo
     static std::optional<MergeTreePartInfo> tryParsePartName(
         std::string_view part_name, MergeTreeDataFormatVersion format_version);
 
+    // 
     static void parseMinMaxDatesFromPartName(const String & part_name, DayNum & min_date, DayNum & max_date);
 
     static bool contains(const String & outer_part_name, const String & inner_part_name, MergeTreeDataFormatVersion format_version);

@@ -109,6 +109,7 @@ public:
             (*stages.begin())->setRuntimeContext(std::move(prepare_stage_ctx), global_ctx);
         }
 
+    // std::future?
     std::future<MergeTreeData::MutableDataPartPtr> getFuture()
     {
         return global_ctx->promise.get_future();
@@ -121,6 +122,7 @@ public:
         return nullptr;
     }
 
+    // 
     bool execute();
 
 private:
@@ -154,6 +156,7 @@ private:
         StorageSnapshotPtr storage_snapshot{nullptr};
         StorageMetadataPtr metadata_snapshot{nullptr};
         FutureMergedMutatedPartPtr future_part{nullptr};
+
         /// This will be either nullptr or new_data_part, so raw pointer is ok.
         IMergeTreeDataPart * parent_part{nullptr};
         ContextPtr context{nullptr};
@@ -168,6 +171,7 @@ private:
         NamesAndTypesList storage_columns{};
         MergeTreeData::DataPart::Checksums checksums_gathered_columns{};
 
+        // IndicesDescription, 继承了 vector<IndexDescription>
         IndicesDescription merging_skip_indexes;
         std::unordered_map<String, IndicesDescription> skip_indexes_by_column;
 
@@ -226,7 +230,7 @@ private:
 
         /// Local variables for this stage
         size_t sum_compressed_bytes_upper_bound{0};
-        bool blocks_are_granules_size{false};
+        bool blocks_are_granules_size{false};   // Vertical, true; 
 
         LoggerPtr log{getLogger("MergeTask::PrepareStage")};
 
@@ -306,6 +310,8 @@ private:
         size_t column_elems_written{0};
         QueryPipeline column_parts_pipeline;
         std::unique_ptr<PullingPipelineExecutor> executor;
+
+        // rows_sources_read_buf
         std::unique_ptr<CompressedReadBufferFromFile> rows_sources_read_buf{nullptr};
     };
 

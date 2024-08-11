@@ -1205,8 +1205,10 @@ Int64 MergeTreeData::getMaxBlockNumber() const
     return max_block_num;
 }
 
+// 
 void MergeTreeData::PartLoadingTree::add(const MergeTreePartInfo & info, const String & name, const DiskPtr & disk)
 {
+    // std::unordered_map<String, NodePtr> root_by_partition;
     auto & current_ptr = root_by_partition[info.partition_id];
     if (!current_ptr)
         current_ptr = std::make_shared<Node>(MergeTreePartInfo{}, "", disk);

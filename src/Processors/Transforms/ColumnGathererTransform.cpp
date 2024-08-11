@@ -60,6 +60,7 @@ void ColumnGathererStream::initialize(Inputs inputs)
         result_column->takeDynamicStructureFromSourceColumns(source_columns);
 }
 
+// 
 IMergingAlgorithm::Status ColumnGathererStream::merge()
 {
     /// Nothing to read after initialize.
@@ -115,6 +116,8 @@ IMergingAlgorithm::Status ColumnGathererStream::merge()
 
     /// Surprisingly this call may directly change some internal state of ColumnGathererStream.
     /// output_column. See ColumnGathererStream::gather.
+    
+    // result_column的 gather方法是？？？
     result_column->gather(*this);
 
     if (next_required_source != -1)
@@ -147,6 +150,8 @@ IMergingAlgorithm::Status ColumnGathererStream::merge()
     merged_rows += col->size();
     merged_bytes += col->allocatedBytes();
     res.addColumn(std::move(col));
+
+    // 根据是否eof判断是否finished
     return Status(std::move(res), row_sources_buf.eof() && !source_to_fully_copy);
 }
 

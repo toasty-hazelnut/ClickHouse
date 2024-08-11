@@ -82,6 +82,7 @@ public:
       */
     TemporaryPart writeTempPart(BlockWithPartition & block, const StorageMetadataPtr & metadata_snapshot, ContextPtr context);
 
+    // merging mode
     MergeTreeData::MergingParams::Mode getMergingMode() const
     {
         return data.merging_params.mode;
@@ -90,6 +91,7 @@ public:
     TemporaryPart writeTempPartWithoutPrefix(BlockWithPartition & block, const StorageMetadataPtr & metadata_snapshot, int64_t block_number, ContextPtr context);
 
     /// For insertion.
+    // 为何projection?
     static TemporaryPart writeProjectionPart(
         const MergeTreeData & data,
         LoggerPtr log,

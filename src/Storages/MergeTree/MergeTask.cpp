@@ -96,6 +96,7 @@ static void addMissedColumnsToSerializationInfos(
 }
 
 /// PK columns are sorted and merged, ordinary columns are gathered using info from merge step
+// 
 void MergeTask::ExecuteAndFinalizeHorizontalPart::extractMergingAndGatheringColumns() const
 {
     const auto & sorting_key_expr = global_ctx->metadata_snapshot->getSortingKey().expression;
@@ -121,6 +122,10 @@ void MergeTask::ExecuteAndFinalizeHorizontalPart::extractMergingAndGatheringColu
     /// Force to merge at least one column in case of empty key
     if (key_columns.empty())
         key_columns.emplace(global_ctx->storage_columns.front().name);
+    
+    // 数据类型：
+    // skip_indexes为IndicesDescription
+    // skip_indexes_by_column : unordered_map<String, IndicesDescription>
 
     const auto & skip_indexes = global_ctx->metadata_snapshot->getSecondaryIndices();
 
@@ -130,6 +135,11 @@ void MergeTask::ExecuteAndFinalizeHorizontalPart::extractMergingAndGatheringColu
 
         /// Calculate indexes that depend only on one column on vertical
         /// stage and other indexes on horizonatal stage of merge.
+
+        // ??
+        // index_columns.size() == 1:
+        //      
+        // 
         if (index_columns.size() == 1)
         {
             const auto & column_name = index_columns.front();
@@ -151,6 +161,7 @@ void MergeTask::ExecuteAndFinalizeHorizontalPart::extractMergingAndGatheringColu
             global_ctx->merging_columns.emplace_back(column);
 
             /// If column is in horizontal stage we need to calculate its indexes on horizontal stage as well
+            // 这段做的似乎是把 从skip_indexes_by_column中删掉，indexes放到 merging_skip_indexes中
             auto it = global_ctx->skip_indexes_by_column.find(column.name);
             if (it != global_ctx->skip_indexes_by_column.end())
             {
@@ -243,6 +254,7 @@ bool MergeTask::ExecuteAndFinalizeHorizontalPart::prepare()
 
     global_ctx->new_data_part->uuid = global_ctx->future_part->uuid;
     global_ctx->new_data_part->partition.assign(global_ctx->future_part->getPartition());
+    // is_temp 和 是否parent_part是否null 有关
     global_ctx->new_data_part->is_temp = global_ctx->parent_part == nullptr;
 
     /// In case of replicated merge tree with zero copy replication
@@ -253,6 +265,7 @@ bool MergeTask::ExecuteAndFinalizeHorizontalPart::prepare()
     ctx->need_remove_expired_values = false;
     ctx->force_ttl = false;
 
+    // enable_block_number_column in MergeTreeSettings.h
     if (enabledBlockNumberColumn(global_ctx))
         addGatheringColumn(global_ctx, BlockNumberColumn::name, BlockNumberColumn::type);
 
@@ -307,6 +320,7 @@ bool MergeTask::ExecuteAndFinalizeHorizontalPart::prepare()
     ctx->sum_input_rows_upper_bound = global_ctx->merge_list_element_ptr->total_rows_count;
     ctx->sum_compressed_bytes_upper_bound = global_ctx->merge_list_element_ptr->total_size_bytes_compressed;
 
+    // 
     global_ctx->chosen_merge_algorithm = chooseMergeAlgorithm();
     global_ctx->merge_list_element_ptr->merge_algorithm.store(global_ctx->chosen_merge_algorithm, std::memory_order_relaxed);
 
@@ -317,23 +331,29 @@ bool MergeTask::ExecuteAndFinalizeHorizontalPart::prepare()
     /// (which is locked in shared mode when input streams are created) and when inserting new data
     /// the order is reverse. This annoys TSan even though one lock is locked in shared mode and thus
     /// deadlock is impossible.
+    // ?
     ctx->compression_codec = global_ctx->data->getCompressionCodecForPart(
         global_ctx->merge_list_element_ptr->total_size_bytes_compressed, global_ctx->new_data_part->ttl_infos, global_ctx->time_of_merge);
 
+    // tmp_disk是干啥的？
     ctx->tmp_disk = std::make_unique<TemporaryDataOnDisk>(global_ctx->context->getTempDataOnDisk());
 
     switch (global_ctx->chosen_merge_algorithm)
     {
         case MergeAlgorithm::Horizontal:
-        {
+        {   
+            // extractMergingAndGatheringColumns()中设置的 merging_columns, gathering_columns 对Horizontal没有意义?
+            // extractMergingAndGatheringColumns()中设置的 merging_skip_indexes, skip_indexes_by_column 对Horizontal没有意义?
             global_ctx->merging_columns = global_ctx->storage_columns;
             global_ctx->merging_skip_indexes = global_ctx->metadata_snapshot->getSecondaryIndices();
+            // 
             global_ctx->gathering_columns.clear();
             global_ctx->skip_indexes_by_column.clear();
             break;
         }
         case MergeAlgorithm::Vertical:
         {
+            // 
             ctx->rows_sources_uncompressed_write_buf = ctx->tmp_disk->createRawStream();
             ctx->rows_sources_write_buf = std::make_unique<CompressedWriteBuffer>(*ctx->rows_sources_uncompressed_write_buf);
 
@@ -421,6 +441,7 @@ bool MergeTask::ExecuteAndFinalizeHorizontalPart::prepare()
     };
 
     /// This is the end of preparation. Execution will be per block.
+    // per block
     return false;
 }
 
@@ -471,10 +492,14 @@ MergeTask::StageRuntimeContextPtr MergeTask::VerticalMergeStage::getContextForNe
     return new_ctx;
 }
 
-
+// stage的execute
 bool MergeTask::ExecuteAndFinalizeHorizontalPart::execute()
 {
     assert(subtasks_iterator != subtasks.end());
+
+    // prepare 或 executeImpl 何时返回true?
+    // prepare似乎一定返回false？
+    // executeImpl 会返回true，执行多次，最终返回false
     if ((this->**subtasks_iterator)())
         return true;
 
@@ -483,10 +508,14 @@ bool MergeTask::ExecuteAndFinalizeHorizontalPart::execute()
     return subtasks_iterator != subtasks.end();
 }
 
+// global_ctx->merging_executor->pull(block), 则继续执行.   何时pull返回false?
+// merging_executor 为  PullingPipelineExecutor*， 
 
 bool MergeTask::ExecuteAndFinalizeHorizontalPart::executeImpl()
 {
     Block block;
+
+    
     if (!ctx->is_cancelled() && (global_ctx->merging_executor->pull(block)))
     {
         global_ctx->rows_written += block.rows();
@@ -515,6 +544,7 @@ bool MergeTask::ExecuteAndFinalizeHorizontalPart::executeImpl()
         return true;
     }
 
+    // reset操作做的是？
     global_ctx->merging_executor.reset();
     global_ctx->merged_pipeline.reset();
 
@@ -531,7 +561,7 @@ bool MergeTask::ExecuteAndFinalizeHorizontalPart::executeImpl()
     return false;
 }
 
-
+// 
 bool MergeTask::VerticalMergeStage::prepareVerticalMergeForAllColumns() const
 {
      /// No need to execute this part if it is horizontal merge.
@@ -543,9 +573,9 @@ bool MergeTask::VerticalMergeStage::prepareVerticalMergeForAllColumns() const
     global_ctx->merge_list_element_ptr->columns_written = global_ctx->merging_columns.size();
     global_ctx->merge_list_element_ptr->progress.store(ctx->column_sizes->keyColumnsWeight(), std::memory_order_relaxed);
 
-    /// Ensure data has written to disk.
+    /// Ensure data has written to disk.   
     ctx->rows_sources_write_buf->finalize();
-    ctx->rows_sources_uncompressed_write_buf->finalize();
+    ctx->rows_sources_uncompressed_write_buf->finalize();    // 为何执行2遍？
     ctx->rows_sources_uncompressed_write_buf->finalize();
 
     size_t rows_sources_count = ctx->rows_sources_write_buf->count();
@@ -705,7 +735,7 @@ void MergeTask::VerticalMergeStage::prepareVerticalMergeForOneColumn() const
     ctx->column_elems_written = 0;
 }
 
-
+// 
 bool MergeTask::VerticalMergeStage::executeVerticalMergeForOneColumn() const
 {
     Block block;
@@ -757,6 +787,7 @@ void MergeTask::VerticalMergeStage::finalizeVerticalMergeForOneColumn() const
     global_ctx->merge_list_element_ptr->progress.store(ctx->progress_before + ctx->column_sizes->columnWeight(column_name), std::memory_order_relaxed);
 
     /// This is the external loop increment.
+    // 是逐个column进行的？
     ++ctx->it_name_and_type;
 }
 
@@ -937,6 +968,7 @@ bool MergeTask::VerticalMergeStage::executeVerticalMergeForAllColumns() const
         return false;
 
     /// This is the external cycle condition
+    // 进行完了所有列
     if (ctx->it_name_and_type == global_ctx->gathering_columns.end())
         return false;
 
@@ -966,7 +998,7 @@ bool MergeTask::VerticalMergeStage::executeVerticalMergeForAllColumns() const
     return false;
 }
 
-
+// 
 bool MergeTask::execute()
 {
     assert(stages_iterator != stages.end());
@@ -996,6 +1028,7 @@ void MergeTask::ExecuteAndFinalizeHorizontalPart::createMergedStream()
 
     /// We count total amount of bytes in parts
     /// and use direct_io + aio if there is more than min_merge_bytes_to_use_direct_io
+    // aio是？
     ctx->read_with_direct_io = false;
     const auto data_settings = global_ctx->data->getSettings();
     if (data_settings->min_merge_bytes_to_use_direct_io != 0)
@@ -1015,6 +1048,7 @@ void MergeTask::ExecuteAndFinalizeHorizontalPart::createMergedStream()
     }
 
     /// Using unique_ptr, because MergeStageProgress has no default constructor
+    // because?
     global_ctx->horizontal_stage_progress = std::make_unique<MergeStageProgress>(
         ctx->column_sizes ? ctx->column_sizes->keyColumnsWeight() : 1.0);
 
@@ -1025,13 +1059,14 @@ void MergeTask::ExecuteAndFinalizeHorizontalPart::createMergedStream()
             *global_ctx->data,
             global_ctx->storage_snapshot,
             part,
-            global_ctx->merging_columns.getNames(),
+            global_ctx->merging_columns.getNames(),         // columns_to_read field in MergeTreeSequentialSource
             /*mark_ranges=*/ {},
             global_ctx->input_rows_filtered,
             /*apply_deleted_mask=*/ true,
             ctx->read_with_direct_io,
             /*prefetch=*/ false);
 
+        // ExpressionTransform?
         if (global_ctx->metadata_snapshot->hasSortingKey())
         {
             pipe.addSimpleTransform([this](const Block & header)
@@ -1054,6 +1089,7 @@ void MergeTask::ExecuteAndFinalizeHorizontalPart::createMergedStream()
 
     Names partition_key_columns = global_ctx->metadata_snapshot->getPartitionKey().column_names;
 
+    // getHeader是谁的方法？
     Block header = pipes.at(0).getHeader();
     for (size_t i = 0; i < sort_columns_size; ++i)
         sort_description.emplace_back(sort_columns[i], 1, 1);
@@ -1219,6 +1255,7 @@ MergeAlgorithm MergeTask::ExecuteAndFinalizeHorizontalPart::chooseMergeAlgorithm
     const size_t total_size_bytes_uncompressed = global_ctx->merge_list_element_ptr->total_size_bytes_uncompressed;
     const auto data_settings = global_ctx->data->getSettings();
 
+    // 一些特殊情况，用horizontal
     if (global_ctx->deduplicate)
         return MergeAlgorithm::Horizontal;
     if (data_settings->enable_vertical_merge_algorithm == 0)
@@ -1231,7 +1268,9 @@ MergeAlgorithm MergeTask::ExecuteAndFinalizeHorizontalPart::chooseMergeAlgorithm
         return MergeAlgorithm::Horizontal;
     if (global_ctx->cleanup)
         return MergeAlgorithm::Horizontal;
-
+    
+    // allow_vertical_merges_from_compact_to_wide_parts, 见MergeTreeSettings.h
+    // 是否允许vertical merges from compact to wide parts
     if (!data_settings->allow_vertical_merges_from_compact_to_wide_parts)
     {
         for (const auto & part : global_ctx->future_part->parts)

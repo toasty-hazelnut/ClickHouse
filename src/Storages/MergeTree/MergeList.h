@@ -96,11 +96,13 @@ struct MergeListElement : boost::noncopyable
     std::atomic<UInt64> rows_written{};
 
     /// Updated only for Vertical algorithm
+    // 
     std::atomic<UInt64> columns_written{};
 
     UInt64 thread_id;
     MergeType merge_type;
     /// Detected after merge already started
+    // 见 MergeTask.cpp global_ctx->merge_list_element_ptr->merge_algorithm.store(global_ctx->chosen_merge_algorithm, std::memory_order_relaxed);
     std::atomic<MergeAlgorithm> merge_algorithm;
 
     ThreadGroupPtr thread_group;

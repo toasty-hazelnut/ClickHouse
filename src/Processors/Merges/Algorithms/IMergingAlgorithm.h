@@ -9,6 +9,7 @@ namespace DB
 class IMergingAlgorithm
 {
 public:
+    // Status中的Chunk是啥？ merge后得到的一个chunk
     struct Status
     {
         Chunk chunk;

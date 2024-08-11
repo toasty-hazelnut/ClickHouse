@@ -93,6 +93,7 @@ void PipelineExecutor::cancelReading()
     }
 }
 
+// 
 void PipelineExecutor::finish()
 {
     tasks.finish();
@@ -131,6 +132,10 @@ void PipelineExecutor::execute(size_t num_threads, bool concurrency_control)
     finalizeExecution();
 }
 
+// from PipelineExecutor.h::executeStep
+/// Execute single step. Step will be stopped when yield_flag is true.
+/// Execution is happened in a single thread.
+/// Return true if execution should be continued.
 bool PipelineExecutor::executeStep(std::atomic_bool * yield_flag)
 {
     if (!is_execution_initialized)
@@ -147,6 +152,7 @@ bool PipelineExecutor::executeStep(std::atomic_bool * yield_flag)
 
     executeStepImpl(0, yield_flag);
 
+    // executeStep返回true表示execution should be continued
     if (!tasks.isFinished())
         return true;
 

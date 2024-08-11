@@ -34,6 +34,8 @@ struct IndexDescription
     FieldVector arguments;
 
     /// Names of index columns (not to be confused with required columns)
+    // what is the difference ??
+    // 见Interpreters/ExpressionActions中的 required_columns
     Names column_names;
 
     /// Data types of index columns
