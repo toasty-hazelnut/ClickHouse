@@ -280,6 +280,7 @@ bool ExecutingGraph::updateNode(uint64_t pid, Queue & queue, Queue & async_queue
                 {
                     auto & processor = *node.processor;
                     IProcessor::Status last_status = node.last_processor_status;
+                    //   
                     IProcessor::Status status = processor.prepare(node.updated_input_ports, node.updated_output_ports);
                     node.last_processor_status = status;
 

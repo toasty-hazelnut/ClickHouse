@@ -117,6 +117,7 @@ ColumnsWithSortDescriptions getColumnsWithSortDescription(const Block & block, c
     return result;
 }
 
+// 
 void getBlockSortPermutationImpl(const Block & block, const SortDescription & description, IColumn::PermutationSortStability stability, UInt64 limit, IColumn::Permutation & permutation)
 {
     if (!block)
@@ -297,6 +298,7 @@ void sortBlock(Block & block, const SortDescription & description, UInt64 limit)
     }
 }
 
+// 
 void stableGetPermutation(const Block & block, const SortDescription & description, IColumn::Permutation & out_permutation)
 {
     if (!block)

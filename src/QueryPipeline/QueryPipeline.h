@@ -50,7 +50,9 @@ public:
     ~QueryPipeline();
 
     /// pulling or completed
+    // 普通merge 用的似乎是这种，pipe作为参数
     explicit QueryPipeline(Pipe pipe);
+    
     /// pulling
     explicit QueryPipeline(std::shared_ptr<ISource> source);
     /// pushing

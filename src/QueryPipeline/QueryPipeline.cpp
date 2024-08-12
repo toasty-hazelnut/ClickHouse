@@ -535,7 +535,7 @@ void QueryPipeline::complete(std::shared_ptr<IOutputFormat> format)
         extremes = &source->getPort();
         processors->emplace_back(std::move(source));
     }
-
+    
     connect(*output, format_main);
     connect(*totals, format_totals);
     connect(*extremes, format_extremes);

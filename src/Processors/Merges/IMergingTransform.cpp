@@ -50,6 +50,8 @@ void IMergingTransformBase::onNewInput()
 }
 
 // 简单merge场景，似乎不会调这个。因为have_all_inputs构造时为true
+
+// IMergingTransformBase::onNewInput未实现，看其子类是否实现
 void IMergingTransformBase::addInput()
 {
     if (have_all_inputs)
@@ -90,7 +92,7 @@ IProcessor::Status IMergingTransformBase::prepareInitializeInputs()
         
         // 之后会设置state.init_chunks
         state.init_chunks.resize(inputs.size());
-    }
+    
 
     /// Check for inputs we need.
     bool all_inputs_has_data = true;
@@ -144,7 +146,7 @@ IProcessor::Status IMergingTransformBase::prepareInitializeInputs()
 
 // 去override IProcessor的prepare()
 // prepare()是被谁调的？
-// next_input_to_read是如何设置的？ 
+// next_input_to_read是如何设置的： 只会在work()中  if (status.required_source >= 0) 中被设置为 = required_source
 IProcessor::Status IMergingTransformBase::prepare()
 {   
     // 简单merge场景，构造时have_all_inputs为true
@@ -177,6 +179,7 @@ IProcessor::Status IMergingTransformBase::prepare()
     bool is_port_full = !output.canPush();
 
     /// Push if has data.
+    // state.output_chunk只在这里被用到
     if ((state.output_chunk || !state.output_chunk.getChunkInfos().empty()) && !is_port_full)
         output.push(std::move(state.output_chunk));
 
@@ -213,7 +216,9 @@ IProcessor::Status IMergingTransformBase::prepare()
         return Status::Finished;
     }
 
-    // 只会读一个input的？
+    // 只会读一个input的？ 似乎是的，只会从一个input port读
+    // 只有在work中，status.required_source >= 0时，会设置state.need_data = true
+    // 只有在work中，status.required_source >= 0时，会设置next_input_to_read
     if (state.need_data)
     {
         auto & input = input_states[state.next_input_to_read].port;
@@ -222,7 +227,9 @@ IProcessor::Status IMergingTransformBase::prepare()
             input.setNeeded();
 
             if (!input.hasData())
-                return Status::NeedData;
+                return Status::NeedData;    // 来自IProcessor.h对NeedData的说明：
+            // Processor needs some data at its inputs to proceed.
+            // You need to run another processor to generate required input and then call 'prepare' again. 
             
             // pull
             state.input_chunk.set(input.pull());
@@ -241,6 +248,8 @@ IProcessor::Status IMergingTransformBase::prepare()
 
     if (is_port_full)
         return Status::PortFull;
+
+    // 如果next_input_to_read这个input isFinished(), 也是返回Status::Ready
 
     return Status::Ready;
 }

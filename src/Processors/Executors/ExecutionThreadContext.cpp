@@ -40,6 +40,7 @@ static bool checkCanAddAdditionalInfoToException(const DB::Exception & exception
            && exception.code() != ErrorCodes::QUERY_WAS_CANCELLED;
 }
 
+// // （终于找到work在哪被调了:)
 static void executeJob(ExecutingGraph::Node * node, ReadProgressCallback * read_progress_callback)
 {
     try

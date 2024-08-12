@@ -35,6 +35,7 @@ class Field;
 class WeakHash32;
 class ColumnConst;
 
+// 
 /// A range of column values between row indexes `from` and `to`. The name "equal range" is due to table sorting as its main use case: With
 /// a PRIMARY KEY (c_pk1, c_pk2, ...), the first PK column is fully sorted. The second PK column is sorted within equal-value runs of the
 /// first PK column, and so on. The number of runs (ranges) per column increases from one primary key column to the next. An "equal range"

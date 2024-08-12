@@ -14,6 +14,9 @@ public:
     {
         Chunk chunk;
         bool is_finished = false;
+        
+        // required_source似乎只会在algoirthm.merge中被设置。
+        // 只会用于赋值给next_input_to_read, state.next_input_to_read = status.required_source; 只会在这里被用到
         ssize_t required_source = -1;
 
         explicit Status(Chunk chunk_) : chunk(std::move(chunk_)) {}

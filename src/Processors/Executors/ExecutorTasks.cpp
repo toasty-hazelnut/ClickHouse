@@ -8,6 +8,7 @@ namespace ErrorCodes
     extern const int LOGICAL_ERROR;
 }
 
+// 在这里设置finished  = true
 void ExecutorTasks::finish()
 {
     {

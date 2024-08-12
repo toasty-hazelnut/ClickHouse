@@ -38,7 +38,7 @@ using MergeTaskPtr = std::shared_ptr<MergeTask>;
  *
  * Each merge is executed sequentially block by block.
  * The main idea is to make a merge not a subroutine which is executed
- * in a thread pool and may occupy a thread for a period of time,
+ * in a thread pool and may occupy a thread for a period of time,  ******
  * but to make a merge a coroutine which can suspend the execution
  * in some points and then resume the execution from this point.
  *
@@ -53,6 +53,11 @@ using MergeTaskPtr = std::shared_ptr<MergeTask>;
  * So, if ClickHouse wants to merge some really big parts into a bigger part,
  * then it will be executed for a long time, because the result of the merge is not really needed immediately.
  * It is better to merge small parts as soon as possible.
+*/
+
+/*
+BackgroundJobExecutor会
+
 */
 class MergeTask
 {

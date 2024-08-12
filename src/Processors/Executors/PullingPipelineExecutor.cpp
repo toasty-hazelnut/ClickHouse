@@ -20,7 +20,9 @@ PullingPipelineExecutor::PullingPipelineExecutor(QueryPipeline & pipeline_) : pi
         throw Exception(ErrorCodes::LOGICAL_ERROR, "Pipeline for PullingPipelineExecutor must be pulling");
 
     // PullingOutputFormat内部的 has_data_flag
-    pulling_format = std::make_shared<PullingOutputFormat>(pipeline.output->getHeader(), has_data_flag);
+    pulling_format = std::make_shared<PullingOutputFormat>(pipeline.output->getHeader(), has_data_flag);    // has_data_flag默认为false
+    
+    // complete中 会相当于  connect(outputPort, format->getPort(IOutputFormat::PortKind::Main);
     pipeline.complete(pulling_format);
 }
 
@@ -47,6 +49,7 @@ bool PullingPipelineExecutor::pull(Chunk & chunk)
     // 构建executor
     if (!executor)
     {
+        // 
         executor = std::make_shared<PipelineExecutor>(pipeline.processors, pipeline.process_list_element);
         executor->setReadProgressCallback(pipeline.getReadProgressCallback());
     }
@@ -67,9 +70,13 @@ bool PullingPipelineExecutor::pull(Chunk & chunk)
 
     // 注意区分 yield_flag 和 executeStep的返回值。
     // yield_flag为true时 executeStep会返回。 但executeStep的返回值为true/false 取决于tasks.isFinished()
+
+    // 何时返回： has_data_flag为true时，PullingOutputFormat processor调用work() 中才会consume 
+    // 见PullingOutputFormat::consume
     if (!executor->executeStep(&has_data_flag))
         return false;
 
+    //   把pulling_format中的has_data_flag设为false。 
     chunk = pulling_format->getChunk();
     return true;
 }

@@ -152,6 +152,7 @@ protected:
         // push
         void ALWAYS_INLINE push(DataPtr & data_, std::uintptr_t & flags)
         {
+            // ... 语法
             flags = data_.swap(data, HAS_DATA, HAS_DATA);
 
             /// It's possible to push data into finished port. Will just ignore it.

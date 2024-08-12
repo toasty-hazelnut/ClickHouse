@@ -493,6 +493,8 @@ MergeTask::StageRuntimeContextPtr MergeTask::VerticalMergeStage::getContextForNe
 }
 
 // stage的execute
+// 执行完一个subtask的一次（比如 merging_executor->pull(block)），就返回 （对于 ++subtasks_iterator;的情况，只是移动iter，还没有指执行subtask就返回？
+
 bool MergeTask::ExecuteAndFinalizeHorizontalPart::execute()
 {
     assert(subtasks_iterator != subtasks.end());
@@ -998,7 +1000,13 @@ bool MergeTask::VerticalMergeStage::executeVerticalMergeForAllColumns() const
     return false;
 }
 
-// 
+/*
+mergeTask::execute()返回true后 会不会停
+
+执行完一个stage中的 一个subtask的一次（比如merging_executor->pull(block) ），就返回
+
+谁调MergeTask::execute()?? 并在其返回true时一直调？  见MergeTask.h
+*/
 bool MergeTask::execute()
 {
     assert(stages_iterator != stages.end());

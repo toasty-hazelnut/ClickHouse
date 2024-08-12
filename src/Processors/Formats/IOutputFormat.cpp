@@ -10,6 +10,7 @@ IOutputFormat::IOutputFormat(const Block & header_, WriteBuffer & out_)
 {
 }
 
+// 
 IOutputFormat::Status IOutputFormat::prepare()
 {
     if (has_input)
@@ -29,7 +30,8 @@ IOutputFormat::Status IOutputFormat::prepare()
 
         if (!input.hasData())
             return Status::NeedData;
-
+        
+        // current_chunk   从input port pull
         current_chunk = input.pull(true);
         current_block_kind = kind;
         has_input = true;
@@ -63,6 +65,8 @@ static Chunk prepareTotals(Chunk chunk)
     return chunk;
 }
 
+// work中会调consume
+
 void IOutputFormat::work()
 {
     writePrefixIfNeeded();
@@ -84,6 +88,7 @@ void IOutputFormat::work()
         case Main:
             result_rows += current_chunk.getNumRows();
             result_bytes += current_chunk.allocatedBytes();
+            // 子类实现的consume，比如PullingOutputFormat类的consume
             consume(std::move(current_chunk));
             break;
         case Totals:

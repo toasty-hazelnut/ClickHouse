@@ -44,7 +44,7 @@ PipelineExecutor::PipelineExecutor(std::shared_ptr<Processors> & processors, Que
         trace_processors = process_list_element->getContext()->getSettingsRef().opentelemetry_trace_processors;
     }
     try
-    {
+    {   // 在构造函数中生成graph
         graph = std::make_unique<ExecutingGraph>(processors, profile_processors);
     }
     catch (Exception & exception)
@@ -93,7 +93,7 @@ void PipelineExecutor::cancelReading()
     }
 }
 
-// 
+// tasks为ExecutorTasks
 void PipelineExecutor::finish()
 {
     tasks.finish();
@@ -150,7 +150,8 @@ bool PipelineExecutor::executeStep(std::atomic_bool * yield_flag)
             return true;
     }
 
-    executeStepImpl(0, yield_flag);
+    // yield_flag为true时返回
+    executeStepImpl(0, yield_flag); // 第一个参数是thread_num
 
     // executeStep返回true表示execution should be continued
     if (!tasks.isFinished())
@@ -161,7 +162,7 @@ bool PipelineExecutor::executeStep(std::atomic_bool * yield_flag)
         if (node->exception)
             std::rethrow_exception(node->exception);
 
-    single_thread_cpu_slot.reset();
+    single_thread_cpu_slot.reset();   // 
     finalizeExecution();
 
     return false;
@@ -264,6 +265,7 @@ void PipelineExecutor::executeStepImpl(size_t thread_num, std::atomic_bool * yie
     auto & context = tasks.getThreadContext(thread_num);
     bool yield = false;
 
+    // 若!context.hasTask(), 且 !yield, 且 !tasks.isFinished(), 则一直循环？
     while (!tasks.isFinished() && !yield)
     {
         /// First, find any processor to execute.
@@ -275,7 +277,9 @@ void PipelineExecutor::executeStepImpl(size_t thread_num, std::atomic_bool * yie
         {
             if (tasks.isFinished())
                 break;
-
+            
+            // 这里只会执行single processor?
+            // context.executeTask() --> executeJob(current node, ) --> node->processor->work()
             if (!context.executeTask())
                 cancel();
 
@@ -295,6 +299,7 @@ void PipelineExecutor::executeStepImpl(size_t thread_num, std::atomic_bool * yie
                 Queue async_queue;
 
                 /// Prepare processor after execution.
+                // 
                 if (!graph->updateNode(context.getProcessorID(), queue, async_queue))
                     cancel();
 
@@ -345,6 +350,7 @@ void PipelineExecutor::initializeExecution(size_t num_threads, bool concurrency_
     Queue queue;
     graph->initializeExecution(queue);
 
+    // queue
     tasks.init(num_threads, use_threads, profile_processors, trace_processors, read_progress_callback.get());
     tasks.fill(queue);
 

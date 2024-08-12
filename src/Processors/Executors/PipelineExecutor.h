@@ -30,7 +30,7 @@ class PipelineExecutor
 public:
     /// Get pipeline as a set of processors.
     /// Processors should represent full graph. All ports must be connected, all connected nodes are mentioned in set.
-    /// Executor doesn't own processors, just stores reference.
+    /// Executor doesn't own processors, just stores reference.  ***
     /// During pipeline execution new processors can appear. They will be added to existing set.
     ///
     /// Explicit graph representation is built in constructor. Throws if graph is not correct.
@@ -70,7 +70,7 @@ private:
 
     /// Concurrency control related
     SlotAllocationPtr cpu_slots;
-    AcquiredSlotPtr single_thread_cpu_slot; // cpu slot for single-thread mode to work using executeStep()
+    AcquiredSlotPtr single_thread_cpu_slot; // cpu slot for single-thread mode to work using executeStep()    
     std::unique_ptr<ThreadPool> pool;
     std::atomic_size_t threads = 0;
 

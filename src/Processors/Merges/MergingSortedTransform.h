@@ -28,6 +28,7 @@ public:
     String getName() const override { return "MergingSortedTransform"; }
 
 protected:
+    // override IMergingTransformBase的 onNewInput(), onFinish()
     void onNewInput() override;
     void onFinish() override;
 

@@ -126,6 +126,7 @@ void IColumn::getPermutationImpl(
     full_sort(res.begin(), res.end(), compare);
 }
 
+// 。。。
 template <typename Compare, typename Equals, typename Sort, typename PartialSort>
 void IColumn::updatePermutationImpl(
     size_t limit,

@@ -156,6 +156,7 @@ void ColumnGathererStream::gather(Column & column_res)
             break;
 
         RowSourcePart row_source = *row_source_pos;
+        // row_source中只会存source_num? 不会存pos？
         size_t source_num = row_source.getSourceNum();
         Source & source = sources[source_num];
         bool source_skip = row_source.getSkipFlag();
@@ -188,8 +189,9 @@ void ColumnGathererStream::gather(Column & column_res)
             {
                 /// If current block already contains data, return it.
                 /// Whole column from current source will be returned on next read() iteration.
-                // 
-                source_to_fully_copy = &source;
+                // 哪是current block already contains data的逻辑？
+                // 'via copying pointer from current block'? 
+                source_to_fully_copy = &source;         // Source*
                 return;
             }
             else if (len == 1)

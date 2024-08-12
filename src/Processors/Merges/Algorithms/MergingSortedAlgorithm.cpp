@@ -42,6 +42,7 @@ MergingSortedAlgorithm::MergingSortedAlgorithm(
         compileSortDescriptionIfNeeded(description, sort_description_types, true /*increase_compile_attempts*/);
 }
 
+// 在普通merge时似乎不会被调用
 void MergingSortedAlgorithm::addInput()
 {
     current_inputs.emplace_back();
@@ -155,9 +156,10 @@ IMergingAlgorithm::Status MergingSortedAlgorithm::mergeImpl(TSortingHeap & queue
         {
             /// Get the next block from the corresponding source, if there is one.
             queue.removeTop();
-            return Status(current.impl->order);     // Status(required_source)  requried_source在哪里被用到？
+            return Status(current.impl->order);     // Status(required_source)  
         }
 
+        // queue.nextChild()是一个child还是2个？？ 如果只是一个的话？？？
         if (current.impl->isFirst()
             && !current_inputs[current.impl->order].skip_last_row /// Ignore optimization if last row should be skipped.
             && (queue.size() == 1
@@ -202,6 +204,7 @@ IMergingAlgorithm::Status MergingSortedAlgorithm::mergeImpl(TSortingHeap & queue
             }
 
             /// We will get the next block from the corresponding source, if there is one.
+            // 下面设置了required_source
             queue.removeTop();
 
             auto status = Status(merged_data.pull(), limit_reached);

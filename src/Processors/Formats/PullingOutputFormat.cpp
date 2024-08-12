@@ -16,7 +16,7 @@ PullingOutputFormat::PullingOutputFormat(const Block & header, std::atomic_bool 
     , has_data_flag(consume_data_flag_)
 {}
 
-//
+// has_data_flag设为true
 void PullingOutputFormat::consume(Chunk chunk)
 {
     if (data)
@@ -26,10 +26,14 @@ void PullingOutputFormat::consume(Chunk chunk)
         info.update(chunk.getNumRows(), chunk.allocatedBytes());
 
     data = std::move(chunk);
+
+    // 在整个src folder中找'has_data_flag', 只有这里设置了has_data_flag, 
+    // 看来 只有PullingOutputFormat这个processor 调用work() work()中会调用consume后，has_data_flag才为true，PullingPipelineExecutor的executeStep才返回
     has_data_flag = true;
 }
 
-// 可看下在哪调用getChunk 。。。
+// has_data_flag设为false
+//
 Chunk PullingOutputFormat::getChunk()
 {
     auto chunk = std::move(data);

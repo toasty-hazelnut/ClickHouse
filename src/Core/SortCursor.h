@@ -133,7 +133,7 @@ struct SortCursorImpl
         permutation = perm;
     }
 
-    // 如果有permutation, 
+    // 如果有permutation, ...
     size_t getRow() const
     {
         if (permutation)
@@ -169,6 +169,7 @@ struct SortCursorHelper
 {
     SortCursorImpl * impl;
 
+    // 例如 SortCursorHelper<SortCursor> 转换成 SortCursor
     const Derived & derived() const { return static_cast<const Derived &>(*this); }
 
     explicit SortCursorHelper(SortCursorImpl * impl_) : impl(impl_) {}
@@ -186,6 +187,8 @@ struct SortCursorHelper
     }
 
     /// Inverted so that the priority queue elements are removed in ascending order.
+    //  make_heap使用的是这个operator< ?    
+    // ...有空可看operator< 返回的含义。   目前推测堆顶是小的。因为某处代码逻辑，以及'removed in ascending order'
     bool ALWAYS_INLINE operator< (const SortCursorHelper & rhs) const
     {
         return derived().greater(rhs.derived());
@@ -202,7 +205,9 @@ struct SortCursorHelper
     }
 };
 
+/*
 
+*/
 struct SortCursor : SortCursorHelper<SortCursor>
 {
     using SortCursorHelper<SortCursor>::SortCursorHelper;
@@ -345,6 +350,7 @@ enum class SortingQueueStrategy : uint8_t
     Batch
 };
 
+// 使用SortingQueueImpl时，会传入什么类型的Cursor？
 /// Allows to fetch data from multiple sort cursors in sorted order (merging sorted data streams).
 template <typename Cursor, SortingQueueStrategy strategy>
 class SortingQueueImpl
@@ -467,9 +473,11 @@ private:
     Container queue;
 
     /// Cache comparison between first and second child if the order in queue has not been changed.
+    // cache在哪？
     size_t next_child_idx = 0;
     size_t batch_size = 0;
 
+    // 
     size_t ALWAYS_INLINE nextChildIndex()
     {   
         // 何时next_child_idx为0？  
@@ -477,6 +485,7 @@ private:
         {
             next_child_idx = 1;
 
+            // 大根堆还是小根堆：从这里的逻辑看，应该堆顶是小的。   获取两个child中较小的那个
             if (queue.size() > 2 && queue[1].greater(queue[2]))
                 ++next_child_idx;
         }
@@ -514,6 +523,7 @@ private:
         do
         {
             /// We are not in heap-order, swap the parent with it's largest child.
+            // swap with largest child, 所以堆顶的是大的？
             *curr_it = std::move(*child_it);
             curr_it = child_it;
 

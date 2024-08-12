@@ -338,6 +338,7 @@ BlocksWithPartition MergeTreeDataWriter::splitBlockIntoParts(
     return result;
 }
 
+// 这个mergeBlock 似乎只有在optimize_on_insert, 或 有projection时会被调用 
 Block MergeTreeDataWriter::mergeBlock(
     Block && block,
     SortDescription sort_description,
@@ -426,6 +427,7 @@ MergeTreeDataWriter::TemporaryPart MergeTreeDataWriter::writeTempPartWithoutPref
     return writeTempPartImpl(block, metadata_snapshot, context, block_number, /*need_tmp_prefix = */false);
 }
 
+// 只是写一个block
 MergeTreeDataWriter::TemporaryPart MergeTreeDataWriter::writeTempPartImpl(
     BlockWithPartition & block_with_partition,
     const StorageMetadataPtr & metadata_snapshot,
@@ -500,6 +502,7 @@ MergeTreeDataWriter::TemporaryPart MergeTreeDataWriter::writeTempPartImpl(
     size_t sort_columns_size = sort_columns.size();
     sort_description.reserve(sort_columns_size);
 
+    // sort_description
     for (size_t i = 0; i < sort_columns_size; ++i)
         sort_description.emplace_back(sort_columns[i], 1, 1);
 

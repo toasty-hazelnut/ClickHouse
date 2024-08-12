@@ -8,6 +8,7 @@ namespace ErrorCodes
     extern const int LOGICAL_ERROR;
 }
 
+// connect, 让output.state = input.state, 指向同一个Port::State
 void connect(OutputPort & output, InputPort & input, bool reconnect)
 {
     if (!reconnect && input.state)

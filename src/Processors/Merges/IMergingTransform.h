@@ -46,6 +46,7 @@ protected:
     {
         Chunk output_chunk;
         IMergingAlgorithm::Input input_chunk;
+
         bool has_input = false;
         bool is_finished = false;
         bool need_data = false;
@@ -125,7 +126,6 @@ public:
     // override IProcessor的work()
     // work调用后，谁来继续调其他的比如prepare?
 
-    // override IProcessor的work
     void work() override
     {
         if (!state.init_chunks.empty())
@@ -133,12 +133,16 @@ public:
             algorithm.initialize(std::move(state.init_chunks));
 
         // init_chunks后，还会有state.has_input吗？ 猜测会，某个part的一个block处理完 要处理下一个block时
+        /*
+        state.has_input何时设置为true:
+          prepare()中，if state.need_data -> if input.hasData() 
+        */
         if (state.has_input)
         {
             // std::cerr << "Consume chunk with " << state.input_chunk.getNumRows()
             //           << " for input " << state.next_input_to_read << std::endl;
             // 
-            // 从algorithm.consume的定义看，next_input_to_read 似乎是指从哪个part (input) 去读下一个block/chunk
+            // 从algorithm.consume的定义看，next_input_to_read 似乎是指从哪个part (input) 去读下一个block/chunk。 *当前*要读的，不是之后要读的
             algorithm.consume(state.input_chunk, state.next_input_to_read);
             state.has_input = false;
         }
@@ -156,6 +160,7 @@ public:
         if ((status.chunk && status.chunk.hasRows()) || !status.chunk.getChunkInfos().empty())
         {
             // std::cerr << "Got chunk with " << status.chunk.getNumRows() << " rows" << std::endl;
+            // state.output_chunk只在这里被设置
             state.output_chunk = std::move(status.chunk);
         }
 

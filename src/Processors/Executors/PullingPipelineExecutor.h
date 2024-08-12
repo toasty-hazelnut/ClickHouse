@@ -20,6 +20,8 @@ using PipelineExecutorPtr = std::shared_ptr<PipelineExecutor>;
 /// PullingPipelineExecutor executor(query_pipeline);
 /// while (executor.pull(chunk))
 ///     ... process chunk ...
+
+// exexutor: execute pipeline (pipeline中有若干tranformers/processors), 
 class PullingPipelineExecutor
 {
 public:

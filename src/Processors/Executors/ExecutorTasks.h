@@ -25,6 +25,7 @@ class ExecutorTasks
 
     /// Queue with pointers to tasks. Each thread will concurrently read from it until finished flag is set.
     /// Stores processors need to be prepared. Preparing status is already set for them.
+    // store processors need to be prepared     
     TaskQueue<ExecutingGraph::Node> task_queue;
 
     /// Queue which stores tasks where processors returned Async status after prepare.

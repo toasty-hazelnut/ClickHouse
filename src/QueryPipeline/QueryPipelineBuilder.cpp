@@ -135,10 +135,14 @@ void QueryPipelineBuilder::addSimpleTransform(const Pipe::ProcessorGetterWithStr
     pipe.addSimpleTransform(getter);
 }
 
+//  
 void QueryPipelineBuilder::addTransform(ProcessorPtr transform)
 {
     checkInitializedAndNotCompleted();
-    pipe.addTransform(std::move(transform));
+    // pipe.addTranform中: 
+    // ... connect ports,   ... Add processor to list:  processors->emplace_back
+    //
+    pipe.addTransform(std::move(transform));  // 
 }
 
 void QueryPipelineBuilder::addTransform(ProcessorPtr transform, InputPort * totals, InputPort * extremes)
@@ -666,7 +670,7 @@ Pipe QueryPipelineBuilder::getPipe(QueryPipelineBuilder pipeline, QueryPlanResou
 
 QueryPipeline QueryPipelineBuilder::getPipeline(QueryPipelineBuilder builder)
 {
-    QueryPipeline res(std::move(builder.pipe));
+    QueryPipeline res(std::move(builder.pipe));     // 给builder添加的transforms 在pipe中
     res.addResources(std::move(builder.resources));
     res.setNumThreads(builder.getNumThreads());
     res.setConcurrencyControl(builder.getConcurrencyControl());

@@ -22,6 +22,7 @@ private:
     bool wake_flag = false;
 
     /// Currently processing node.
+    // 
     ExecutingGraph::Node * node = nullptr;
 
     /// Exception from executing thread itself.
