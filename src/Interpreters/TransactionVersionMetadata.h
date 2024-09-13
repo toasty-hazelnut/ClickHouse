@@ -26,6 +26,7 @@ struct TransactionInfoContext
 
 /// This structure contains metadata of an object (currently it's used for data parts in MergeTree only)
 /// that allows to determine when and by which transaction it has been created/removed
+// 
 struct VersionMetadata
 {
     /// ID of transaction that has created/is trying to create this object
@@ -34,6 +35,7 @@ struct VersionMetadata
     TransactionID removal_tid = Tx::EmptyTID;
 
     /// Hash of removal_tid, used to lock an object for removal
+    // 根据这个判断是否isRemovalTIDLocked
     std::atomic<TIDHash> removal_tid_lock = 0;
 
     /// CSN of transaction that has created this object
@@ -42,6 +44,7 @@ struct VersionMetadata
     std::atomic<CSN> removal_csn = Tx::UnknownCSN;
 
     /// Checks if an object is visible for transaction or not.
+    //
     bool isVisible(const MergeTreeTransaction & txn);
     bool isVisible(CSN snapshot_version, TransactionID current_tid = Tx::EmptyTID);
 

@@ -168,6 +168,7 @@ MergeTreeDataPartWriterOnDisk::MergeTreeDataPartWriterOnDisk(
     , execution_stats(skip_indices.size(), stats.size())
     , log(getLogger(logger_name_ + " (DataPartWriter)"))
 {
+    // 。。。
     if (settings.blocks_are_granules_size && !index_granularity.empty())
         throw Exception(ErrorCodes::LOGICAL_ERROR,
                         "Can't take information about index granularity from blocks, when non empty index_granularity array specified");
@@ -185,6 +186,7 @@ MergeTreeDataPartWriterOnDisk::MergeTreeDataPartWriterOnDisk(
 // Implementation is split into static functions for ability
 /// of making unit tests without creation instance of IMergeTreeDataPartWriter,
 /// which requires a lot of dependencies and access to filesystem.
+// 。。。
 static size_t computeIndexGranularityImpl(
     const Block & block,
     size_t index_granularity_bytes,
@@ -220,7 +222,7 @@ static size_t computeIndexGranularityImpl(
 
     /// We should be less or equal than fixed index granularity.
     /// But if block size is a granule size then do not adjust it.
-    /// Granularity greater than fixed granularity might come from compact part.
+    /// Granularity greater than fixed granularity might come from compact part.  //。。。
     if (!blocks_are_granules)
         index_granularity_for_block = std::min(fixed_index_granularity_rows, index_granularity_for_block);
 

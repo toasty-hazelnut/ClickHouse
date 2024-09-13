@@ -6,3 +6,5 @@ CI use these configs in all checks installing them with `install.sh` script. If 
 ## How to add new config
 
 Place file `.xml` with new config in the appropriate directory and add `ln` command into `install.sh` script. CI will use then this config in all test runs.
+
+// 

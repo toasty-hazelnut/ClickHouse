@@ -26,6 +26,7 @@ namespace ErrorCodes
   *
   * Derived classes must implement the nextImpl() method.
   */
+// 
 class WriteBuffer : public BufferBase
 {
 public:

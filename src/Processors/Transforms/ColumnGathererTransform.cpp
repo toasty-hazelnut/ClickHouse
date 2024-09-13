@@ -17,6 +17,7 @@ namespace ErrorCodes
     extern const int RECEIVED_EMPTY_DATA;
 }
 
+// num_inputs, row_sources_buf_, block_preferred_size_rows_, block_preferred_size_bytes_, is_result_sparse_
 ColumnGathererStream::ColumnGathererStream(
     size_t num_inputs,
     ReadBuffer & row_sources_buf_,
@@ -60,7 +61,8 @@ void ColumnGathererStream::initialize(Inputs inputs)
         result_column->takeDynamicStructureFromSourceColumns(source_columns);
 }
 
-// 
+// 算法所在的主要的地方。。。
+// * 何时返回：  见gather(*this);返回的原因
 IMergingAlgorithm::Status ColumnGathererStream::merge()
 {
     /// Nothing to read after initialize.
@@ -84,9 +86,9 @@ IMergingAlgorithm::Status ColumnGathererStream::merge()
             res.addColumn(source_to_fully_copy->column);
         }
         merged_rows += source_to_fully_copy->size;
-        source_to_fully_copy->pos = source_to_fully_copy->size;
+        source_to_fully_copy->pos = source_to_fully_copy->size;   // 
         source_to_fully_copy = nullptr;
-        return Status(std::move(res));
+        return Status(std::move(res));      // 。。。。。
     }
 
     /// Special case: single source and there are no skipped rows
@@ -111,13 +113,24 @@ IMergingAlgorithm::Status ColumnGathererStream::merge()
         return Status(next_required_source);
     }
 
-    if (next_required_source != -1 && sources[next_required_source].size == 0)
+    if (next_required_source != -1 && sources[next_required_source].size == 0)  // (应该是经过上一次调用，设置了next_required_source, 但
+        // 正常来说，如果上一次调merge()中设置了next_required_source, 猜测所在的work() 然后调prepare()会返回非Ready的状态。
+        // 再次调prepare() 返回Ready后，work()才会被调用，于是这时sources[next_required_source]应该size非0了
+        // 
         throw Exception(ErrorCodes::RECEIVED_EMPTY_DATA, "Cannot fetch required block. Source {}", toString(next_required_source));
 
     /// Surprisingly this call may directly change some internal state of ColumnGathererStream.
-    /// output_column. See ColumnGathererStream::gather.
+    /// output_column. See ColumnGathererStream::gather.  // （指的应该是ColumnGathererStream的成员MutableColumnPtr result_column;
     
-    // result_column的 gather方法是？？？
+    // result_column的 gather方法是？
+    /* IColumnHelper中的void gather(ColumnGathererStream & gatherer) override { gatherer.gather(static_cast<Derived &>(*this)); }
+    具体的Column似乎继承 IColumnHelper 
+
+    于是，gatherer.gather()
+    template <typename Column>
+    void ColumnGathererStream::gather(Column & column_res)  { ... }
+
+    */
     result_column->gather(*this);
 
     if (next_required_source != -1)
@@ -143,17 +156,42 @@ IMergingAlgorithm::Status ColumnGathererStream::merge()
         return Status(std::move(res));
     }
 
-    auto col = result_column->cloneEmpty();
-    result_column.swap(col);
+    auto col = result_column->cloneEmpty();     // Creates empty column with the same type. IColumn
+    result_column.swap(col);                    // 猜测col变成原来的result_column
 
     Chunk res;
     merged_rows += col->size();
     merged_bytes += col->allocatedBytes();
     res.addColumn(std::move(col));
 
+    /* 似乎是，如果 source_to_fully_copy 但 result_column非空：   */
+
     // 根据是否eof判断是否finished
+    // 。。。
     return Status(std::move(res), row_sources_buf.eof() && !source_to_fully_copy);
 }
+
+/* 关于IMergingAlgorithm::Status ColumnGathererStream::merge()中为何有2处判断 if source_to_fully_copy:
+猜测：
+- 1. 如果设置了source_to_fully_copy且res_column非空  。。。。
+则先把当前的res_column返回
+再次调用merge()时，直接把source的整个block给res
+因为。。。  给chunk 看下增加column时是否支持append的操作？？  否则要先构建出column的话  要column insert 复制 。。。
+
+- 2. 如果设置了source_to_fully_copy且res_column为空，则可以直接返回。
+
+
+
+看下如果res_column中有内容，gather()中是否还会正常设置source_to_fully_copy:
+猜测，有可能。例，上次merge()中gather()调用 因为source耗尽而返回。再次调用merge() - gather()时，res_column中有东西，但依旧会设置source_to_fully_copy
+
+
+Chunk::addColumn():
+    columns.emplace_back(std::move( ColumnPtr column));   // Chunk的成员 Columns columns // Columns 相当于 vector<IColumn::Ptr>
+    Columns columns;
+
+
+  */
 
 
 void ColumnGathererStream::consume(Input & input, size_t source_num)
@@ -164,7 +202,7 @@ void ColumnGathererStream::consume(Input & input, size_t source_num)
         if (!is_result_sparse)
             convertToFullIfSparse(input.chunk);
 
-        source.update(input.chunk.getColumns().at(0));
+        source.update(input.chunk.getColumns().at(0));      // 参数是ColumnPtr
     }
 
     if (0 == source.size)
@@ -173,6 +211,7 @@ void ColumnGathererStream::consume(Input & input, size_t source_num)
     }
 }
 
+// 第二行的参数似乎是给ColumnGathererStream的
 ColumnGathererTransform::ColumnGathererTransform(
     const Block & header,
     size_t num_inputs,

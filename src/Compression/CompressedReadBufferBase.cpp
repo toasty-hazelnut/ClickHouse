@@ -173,7 +173,7 @@ size_t CompressedReadBufferBase::readCompressedData(size_t & size_decompressed, 
         header_size,
         codec,
         size_decompressed,
-        size_compressed_without_checksum,
+        size_compressed_without_checksum,  // 传的是引用，会修改
         allow_different_codecs,
         external_data);
 

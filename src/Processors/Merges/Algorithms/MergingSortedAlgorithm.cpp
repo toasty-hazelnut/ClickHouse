@@ -87,17 +87,31 @@ void MergingSortedAlgorithm::initialize(Inputs inputs)
 
 
 // 猜测是某个part的一个block读完了，去读下一个block 也就是新的input
+/*
+ 当一个block处理完，为何要 removeTop(), 把cursor从heap中移出。然后consume block时再把cursor加入heap？
+heap的开销：
+remove, push  vs. updateTop
+
+cursor信息重新初始化reset的开销：
+不，这些开销是必要的。没法优化掉
+
+（是同一个curosr object.  都是cursors[source_num]
+
+。。。或许可成为微小的优化的点？ 因为heap的开销不像一个block内curosr移动那样 次数很多。 
+*/
 void MergingSortedAlgorithm::consume(Input & input, size_t source_num)
 {
     removeConstAndSparse(input);
     current_inputs[source_num].swap(input);
     //  Set the cursor to the beginning of the new block.
+    // 会设置cursor中的all_columns为 这个chunk的columns （也就是说，cursor中的all_columns 只是指向这一个block的clolumns。 这个block的columns耗尽后，就会clear cusror的很多信息，重新加载
     cursors[source_num].reset(current_inputs[source_num].chunk.getColumns(), header);
 
     if (sorting_queue_strategy == SortingQueueStrategy::Default)
     {
         queue_variants.callOnVariant([&](auto & queue)
-        {
+        {   
+            // 会把这个cursor重新
             queue.push(cursors[source_num]);
         });
     }
@@ -134,10 +148,13 @@ IMergingAlgorithm::Status MergingSortedAlgorithm::merge()
 }
 
 /*
-哪些情况会返回：
+哪些情况merge()会返回：
 merge出了一个chunk；
-队首的chunk耗尽了；
+队首的chunk耗尽了.
 
+但队首chunk单纯耗尽（不是totallylessthan时有mergedRows）的情况中：
+merge()并不会返回含chunk的Status.
+于是MergeTask会继续进行、整个pipeline会继续执行，会让input source work, ... 再次调用work -> merge, 直至mergeImpl返回了含chunk的Status
 
 */  
 template <typename TSortingHeap>
@@ -159,7 +176,7 @@ IMergingAlgorithm::Status MergingSortedAlgorithm::mergeImpl(TSortingHeap & queue
             return Status(current.impl->order);     // Status(required_source)  
         }
 
-        // queue.nextChild()是一个child还是2个？？ 如果只是一个的话？？？
+        // queue.nextChild()是较小的那个child
         if (current.impl->isFirst()
             && !current_inputs[current.impl->order].skip_last_row /// Ignore optimization if last row should be skipped.
             && (queue.size() == 1
@@ -174,6 +191,7 @@ IMergingAlgorithm::Status MergingSortedAlgorithm::mergeImpl(TSortingHeap & queue
               * Then we can insert chunk directly in merged data.
               */
             // current.impl->isFirst时，是有可能出现merged_data非空的 （例如，上一次因为队首chunk耗尽了 于是merge结束运行了 但只是reutrn Status(required_source)，不会return Status(chunk, required_source)）
+            // 为何要先flush it？？ 是没有空间放多于一个chunk吗还是？
             if (merged_data.mergedRows() != 0)
                 return Status(merged_data.pull());      // Status(chunk)
 
@@ -191,7 +209,9 @@ IMergingAlgorithm::Status MergingSortedAlgorithm::mergeImpl(TSortingHeap & queue
             if (limit && total_merged_rows_after_insertion > limit)
                 chunk_num_rows -= total_merged_rows_after_insertion - limit;
 
-            merged_data.insertChunk(std::move(current_inputs[source_num].chunk), chunk_num_rows);
+            // 插入chunk_num_rows这么多行。 先整个'插入'，再pop
+            // 如果超过limit，超过limit的部分似乎就直接丢弃了
+            merged_data.insertChunk(std::move(current_inputs[source_num].chunk), chunk_num_rows);   //  内部: columns[i] = std::move(chunk_columns[i]);
             current_inputs[source_num].chunk = Chunk();
 
             /// Write order of rows for other columns this data will be used in gather stream
@@ -216,8 +236,9 @@ IMergingAlgorithm::Status MergingSortedAlgorithm::mergeImpl(TSortingHeap & queue
         }
 
         // 插入single row
-        // all_columns？ 似乎同input.chunk.getColumns    看下vertical merge中的input是啥。。。
-        merged_data.insertRow(current->all_columns, current->getRow(), current->rows);
+        // all_columns？ 似乎同input.chunk.getColumns  
+        // 内部会调Column的insertFrom，同vertical中的insertFrom （但因为horizontal中是插入多个列，所以用merged_data包了一层）
+        merged_data.insertRow(current->all_columns, current->getRow(), current->rows);  // all_columns （类型为ColumnRawPtrs），pos，一共多少rows
 
         if (out_row_sources_buf)
         {
@@ -331,7 +352,7 @@ IMergingAlgorithm::Status MergingSortedAlgorithm::mergeBatchImpl(TSortingQueue &
         }
 
         size_t insert_rows_size = updated_batch_size - static_cast<size_t>(batch_skip_last_row);
-        merged_data.insertRows(current->all_columns, current->getRow(), insert_rows_size, current->rows);
+        merged_data.insertRows(current->all_columns, current->getRow(), insert_rows_size, current->rows); // 内部会调Column的insertRangeFrom
 
         if (out_row_sources_buf)
         {
@@ -346,7 +367,7 @@ IMergingAlgorithm::Status MergingSortedAlgorithm::mergeBatchImpl(TSortingQueue &
 
         if (!current->isLast(updated_batch_size))
         {
-            queue.next(updated_batch_size);
+            queue.next(updated_batch_size);  // 
         }
         else
         {

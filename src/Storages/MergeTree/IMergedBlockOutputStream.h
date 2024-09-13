@@ -50,7 +50,7 @@ protected:
     StorageMetadataPtr metadata_snapshot;
 
     MutableDataPartStoragePtr data_part_storage;
-    MergeTreeDataPartWriterPtr writer;
+    MergeTreeDataPartWriterPtr writer;  // 
 
     bool reset_columns = false;
     SerializationInfoByName new_serialization_infos;

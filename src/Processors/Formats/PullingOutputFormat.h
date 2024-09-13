@@ -41,6 +41,7 @@ private:
     ProfileInfo info;
 
     /// Is not used.
+    // ****
     static WriteBufferFromPointer out;
 };
 

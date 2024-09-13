@@ -142,8 +142,8 @@ void ISerialization::deserializeBinaryBulkWithMultipleStreams(
     {
         column = cached_column;
     }
-    else if (ReadBuffer * stream = settings.getter(settings.path))
-    {
+    else if (ReadBuffer * stream = settings.getter(settings.path))   
+    {  // ReadBuffer* stream, 比如 CompressedReadBufferFromFile
         auto mutable_column = column->assumeMutable();
         deserializeBinaryBulk(*mutable_column, *stream, limit, settings.avg_value_size_hint);
         column = std::move(mutable_column);

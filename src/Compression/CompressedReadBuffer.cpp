@@ -26,6 +26,7 @@ bool CompressedReadBuffer::nextImpl()
     return true;
 }
 
+// 
 size_t CompressedReadBuffer::readBig(char * to, size_t n)
 {
     size_t bytes_read = 0;
@@ -40,6 +41,7 @@ size_t CompressedReadBuffer::readBig(char * to, size_t n)
         size_t size_decompressed;
         size_t size_compressed_without_checksum;
 
+        // readCompressedData会修改size_decompressed, size_compressed_without_checksum
         if (!readCompressedData(size_decompressed, size_compressed_without_checksum, false))
             return bytes_read;
 

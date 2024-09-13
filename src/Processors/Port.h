@@ -149,6 +149,12 @@ protected:
             delete expected;
         }
 
+        /*
+        为何不是：例如 !HAS_DATA -> push -> HAS_DATA -> pull -> !HAS_DATA -> push ... 
+        ？？？
+        HAS_DATA是如何改变的？？
+        */
+
         // push
         void ALWAYS_INLINE push(DataPtr & data_, std::uintptr_t & flags)
         {
@@ -163,6 +169,7 @@ protected:
             /// if ((flags & IS_NEEDED) == 0)
             ///    throw Exception(ErrorCodes::LOGICAL_ERROR, "Cannot push block to port which is not needed.");
 
+            // flags的值难道不会变吗？依旧是!HAS_DATA。。。？
             if (unlikely(flags & HAS_DATA))
                 throw Exception(ErrorCodes::LOGICAL_ERROR, "Cannot push block to port which already has data");
         }
@@ -179,7 +186,8 @@ protected:
             /// It's ok to check because this flag can be changed only by pulling thread.
             if (unlikely((flags & IS_NEEDED) == 0) && !set_not_needed)
                 throw Exception(ErrorCodes::LOGICAL_ERROR, "Cannot pull block from port which is not needed");
-
+            
+            // flags的值难道不会变吗？ 依旧是HAS_DATA? 。。。
             if (unlikely((flags & HAS_DATA) == 0))
                 throw Exception(ErrorCodes::LOGICAL_ERROR, "Cannot pull block from port which has no data");
         }
@@ -207,7 +215,7 @@ protected:
     Block header;
     std::shared_ptr<State> state;
 
-    /// This object is only used for data exchange between port and shared state.
+    /// This object is only used for data exchange between port and shared state. //? 是说共享的state中的data 和 port的成员DataPtr data吗?
     State::DataPtr data;
 
     IProcessor * processor = nullptr;
@@ -224,6 +232,8 @@ public:
     void setUpdateInfo(UpdateInfo * info) { update_info = info; }
 
     const Block & getHeader() const { return header; }
+
+    //
     bool ALWAYS_INLINE isConnected() const { return state != nullptr; }
 
     void ALWAYS_INLINE assumeConnected() const
@@ -260,9 +270,16 @@ protected:
     }
 
     /// For processors_profile_log
+    // 
     size_t rows = 0;
     size_t bytes = 0;
 };
+
+/*
+HASDATA, 则只能pull，不能push。推测Chunk pull()中会把shared state中的data给返回值chunk
+!HASDATA, 则只能push，不能pull。推测push(chunk)中会把参数chunk给shared state中的data
+
+*/
 
 /// Invariants:
 ///   * If you close port, it isFinished().
@@ -391,7 +408,7 @@ public:
 ///   * If you finish port, it isFinished().
 ///   * If port isFinished(), you can do nothing with it.
 ///   * If port not isNeeded(), you can only finish() it.
-///   * You can push only if port doesn't hasData().
+///   * You can push only if port doesn't hasData().  // 
 class OutputPort : public Port
 {
     friend void connect(OutputPort &, InputPort &, bool);
@@ -402,6 +419,7 @@ private:
 public:
     using Port::Port;
 
+    //
     void ALWAYS_INLINE push(Chunk chunk)
     {
         pushData({.chunk = std::move(chunk), .exception = {}});
@@ -432,12 +450,12 @@ public:
         assumeConnected();
 
         std::uintptr_t flags = 0;
-        *data = std::move(data_);
+        *data = std::move(data_);   //
 
-        rows += data->chunk.getNumRows();
+        rows += data->chunk.getNumRows();       // 。。。？ rows的含义
         bytes += data->chunk.bytes();
 
-        state->push(data, flags);
+        state->push(data, flags); //
     }
 
     void ALWAYS_INLINE finish()
@@ -462,6 +480,7 @@ public:
         return state->getFlags() & State::IS_FINISHED;
     }
 
+    // 猜测 IS_NEEDED 且 !HAS_DATA, 则canPush
     bool ALWAYS_INLINE canPush() const
     {
         assumeConnected();

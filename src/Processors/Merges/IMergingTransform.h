@@ -8,7 +8,7 @@ namespace DB
 {
 
 /// Base class for IMergingTransform.
-/// It is needed to extract all non-template methods in single translation unit.
+/// It is needed to extract all non-template methods in single translation unit.  //?
 class IMergingTransformBase : public IProcessor
 {
 public:
@@ -129,7 +129,7 @@ public:
     void work() override
     {
         if (!state.init_chunks.empty())
-            // 见MergingSortedAlgorithm.cpp
+            // 见MergingSortedAlgorithm.cpp / ColumnGathererStream::initialize(
             algorithm.initialize(std::move(state.init_chunks));
 
         // init_chunks后，还会有state.has_input吗？ 猜测会，某个part的一个block处理完 要处理下一个block时
@@ -162,6 +162,7 @@ public:
             // std::cerr << "Got chunk with " << status.chunk.getNumRows() << " rows" << std::endl;
             // state.output_chunk只在这里被设置
             state.output_chunk = std::move(status.chunk);
+            // 设置为state.output_chunk=xx后，如果prepare再被调用，会output.push(this chunk);   暂不知道是否会返回Status::PortFull。。
         }
 
         if (status.required_source >= 0)
@@ -169,6 +170,7 @@ public:
             // std::cerr << "Required data for input " << status.required_source << std::endl;
             state.next_input_to_read = status.required_source;
             state.need_data = true;
+            // 设置为state.need_data=true; 后，如果prepare再被调用，prepare可能会返回 Status::NeedData  于是其他processor会被调用？？
         }
 
         if (status.is_finished)

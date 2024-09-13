@@ -44,6 +44,7 @@ namespace DB
 {
 
 /// Number of streams is not number parts, but number or parts*files, hence 1000.
+// 。。。有空可搜
 const size_t DEFAULT_DELAYED_STREAMS_FOR_PARALLEL_WRITE = 1000;
 
 struct AlterCommand;
@@ -186,6 +187,7 @@ public:
 
     STRONG_TYPEDEF(String, PartitionID)
 
+    // 。。。
     struct LessDataPart
     {
         using is_transparent = void;
@@ -197,6 +199,8 @@ public:
         bool operator()(const PartitionID & lhs, const MergeTreePartInfo & rhs) const { return lhs.toUnderType() < rhs.partition_id; }
     };
 
+    // 。。。
+    // 猜测基本上可以理解为 相比于LessDataPart(), 比较时额外根据了state
     struct LessStateDataPart
     {
         using is_transparent = void;
@@ -248,6 +252,7 @@ public:
     /// * Next, if commit() is called, the parts are added to the active set and the parts that are
     ///   covered by them are marked Outdated.
     /// If neither commit() nor rollback() was called, the destructor rollbacks the operation.
+    // 。。。 
     class Transaction : private boost::noncopyable
     {
     public:
@@ -447,6 +452,7 @@ public:
 
     /// Snapshot for MergeTree contains the current set of data parts
     /// at the moment of the start of query.
+    // 
     struct SnapshotData : public StorageSnapshot::Data
     {
         DataPartsVector parts;
@@ -459,6 +465,7 @@ public:
     StorageSnapshotPtr getStorageSnapshotWithoutData(const StorageMetadataPtr & metadata_snapshot, ContextPtr query_context) const override;
 
     /// Load the set of data parts from disk. Call once - immediately after the object is created.
+    // StorageMergeTree的构造函数中，会调用它
     void loadDataParts(bool skip_sanity_checks, std::optional<std::unordered_set<std::string>> expected_parts);
 
     String getLogName() const { return log.loadName(); }
@@ -486,6 +493,7 @@ public:
     ///  out_states will contain snapshot of each part state
     DataPartsVector getDataPartsVectorForInternalUsage(
         const DataPartStates & affordable_states, DataPartStateVector * out_states = nullptr) const;
+
     /// Same as above but only returns projection parts
     ProjectionPartsVector getProjectionPartsVectorForInternalUsage(
         const DataPartStates & affordable_states, MergeTreeData::DataPartStateVector * out_states) const;
@@ -1030,6 +1038,7 @@ public:
 
     /// Schedules background job to like merge/mutate/fetch an executor
     virtual bool scheduleDataProcessingJob(BackgroundJobsAssignee & assignee) = 0;
+
     /// Schedules job to move parts between disks/volumes and so on.
     bool scheduleDataMovingJob(BackgroundJobsAssignee & assignee);
     bool areBackgroundMovesNeeded() const;
@@ -1134,6 +1143,7 @@ protected:
     PinnedPartUUIDsPtr pinned_part_uuids;
 
     /// True if at least one part was created/removed with transaction.
+    // 。。
     mutable std::atomic_bool transactions_enabled = false;
 
     std::atomic_bool data_parts_loading_finished = false;
@@ -1174,7 +1184,7 @@ protected:
     /// Current set of data parts.
     mutable std::mutex data_parts_mutex;
     DataPartsIndexes data_parts_indexes;
-    DataPartsIndexes::index<TagByInfo>::type & data_parts_by_info;
+    DataPartsIndexes::index<TagByInfo>::type & data_parts_by_info;   // 。。。
     DataPartsIndexes::index<TagByStateAndInfo>::type & data_parts_by_state_and_info;
 
     /// Mutex for critical sections which alter set of parts
@@ -1208,6 +1218,7 @@ protected:
     using DataPartIteratorByInfo = DataPartsIndexes::index<TagByInfo>::type::iterator;
     using DataPartIteratorByStateAndInfo = DataPartsIndexes::index<TagByStateAndInfo>::type::iterator;
 
+    // 推测data_parts_by_state_and_info是有序的？
     boost::iterator_range<DataPartIteratorByStateAndInfo> getDataPartsStateRange(DataPartState state) const
     {
         auto begin = data_parts_by_state_and_info.lower_bound(state, LessStateDataPart());

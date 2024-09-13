@@ -26,6 +26,7 @@ namespace DB
   * Read/WriteBuffer can own or not own an own piece of memory.
   * In the second case, you can effectively read from an already existing piece of memory / std::string without copying it.
   */
+// 有空可看 ...
 class BufferBase
 {
 public:

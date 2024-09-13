@@ -180,6 +180,7 @@ public:
 
     /// Appends n-th element from other column with the same type.
     /// Is used in merge-sort and merges. It could be implemented in inherited classes more optimally than default implementation.
+    // 
 #if !defined(DEBUG_OR_SANITIZER_BUILD)
     virtual void insertFrom(const IColumn & src, size_t n);
 #else
@@ -406,6 +407,7 @@ public:
       * limit - if isn't 0, then only first limit elements of the result column could be sorted.
       * nan_direction_hint - see above.
       */
+      // 
     virtual void getPermutation(PermutationSortDirection direction, PermutationSortStability stability,
                             size_t limit, int nan_direction_hint, Permutation & res) const = 0;
 
@@ -462,6 +464,7 @@ public:
     /// For now it is a helper to de-virtualize calls to insert*() functions inside gather loop
     /// (descendants should call gatherer_stream.gather(*this) to implement this function.)
     /// TODO: interface decoupled from ColumnGathererStream that allows non-generic specializations.
+    // 。。。
     virtual void gather(ColumnGathererStream & gatherer_stream) = 0;
 
     /** Computes minimum and maximum element of the column.
@@ -755,6 +758,7 @@ bool isColumnNullableOrLowCardinalityNullable(const IColumn & column);
 /// Implement methods to devirtualize some calls of IColumn in final descendents.
 /// `typename Parent` is needed because some columns don't inherit IColumn directly.
 /// See ColumnFixedSizeHelper for example.
+// 有空可看下这个devirtualize是怎么做的...
 template <typename Derived, typename Parent = IColumn>
 class IColumnHelper : public Parent
 {
@@ -762,6 +766,7 @@ class IColumnHelper : public Parent
     MutableColumns scatter(IColumn::ColumnIndex num_columns, const IColumn::Selector & selector) const override;
 
     /// Devirtualize insertFrom and insertRangeFrom.
+    // 。。。
     void gather(ColumnGathererStream & gatherer) override;
 
     /// Devirtualize compareAt.

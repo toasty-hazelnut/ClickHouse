@@ -19,6 +19,7 @@ PullingOutputFormat::PullingOutputFormat(const Block & header, std::atomic_bool 
 // has_data_flag设为true
 void PullingOutputFormat::consume(Chunk chunk)
 {
+    // 。。。
     if (data)
         throw Exception(ErrorCodes::LOGICAL_ERROR, "PullingOutputFormat cannot consume chunk because it already has data");
 

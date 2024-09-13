@@ -111,6 +111,7 @@ void IOutputFormat::work()
     has_input = false;
 }
 
+// 。。。
 void IOutputFormat::flush()
 {
     out.next();

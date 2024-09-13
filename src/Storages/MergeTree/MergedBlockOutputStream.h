@@ -12,6 +12,7 @@ namespace DB
 /** To write one part.
   * The data refers to one partition, and is written in one part.
   */
+  // 知乎某文章说merge输出时是用这个  待确认 
 class MergedBlockOutputStream final : public IMergedBlockOutputStream
 {
 public:

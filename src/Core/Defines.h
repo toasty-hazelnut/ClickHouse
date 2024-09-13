@@ -25,6 +25,7 @@ static constexpr auto PADDING_FOR_SIMD = 64;
 /** Which blocks by default read the data (by number of rows).
   * Smaller values give better cache locality, less consumption of RAM, but more overhead to process the query.
   */
+  // 
 static constexpr auto DEFAULT_BLOCK_SIZE
     = 65409; /// 65536 - PADDING_FOR_SIMD - (PADDING_FOR_SIMD - 1) bytes padding that we usually have in = arrays
 
@@ -33,6 +34,7 @@ static constexpr auto DEFAULT_BLOCK_SIZE
   * More than DEFAULT_BLOCK_SIZE, because in some tables a block of data on the disk is created for each block (quite a big thing),
   *  and if the parts were small, then it would be costly then to combine them.
   */
+  // ?????
 static constexpr auto DEFAULT_INSERT_BLOCK_SIZE
     = 1048449; /// 1048576 - PADDING_FOR_SIMD - (PADDING_FOR_SIMD - 1) bytes padding that we usually have in arrays
 
@@ -98,7 +100,7 @@ static constexpr auto DEFAULT_INDEX_UNCOMPRESSED_CACHE_SIZE_RATIO = 0.5;
 static constexpr auto DEFAULT_INDEX_MARK_CACHE_POLICY = "SLRU";
 static constexpr auto DEFAULT_INDEX_MARK_CACHE_MAX_SIZE = 5_GiB;
 static constexpr auto DEFAULT_INDEX_MARK_CACHE_SIZE_RATIO = 0.3;
-static constexpr auto DEFAULT_MMAP_CACHE_MAX_SIZE = 1_KiB; /// chosen by rolling dice
+static constexpr auto DEFAULT_MMAP_CACHE_MAX_SIZE = 1_KiB; /// chosen by rolling dice  // ;) lol
 static constexpr auto DEFAULT_COMPILED_EXPRESSION_CACHE_MAX_SIZE = 128_MiB;
 static constexpr auto DEFAULT_COMPILED_EXPRESSION_CACHE_MAX_ENTRIES = 10'000;
 static constexpr auto DEFAULT_QUERY_CACHE_MAX_SIZE = 1_GiB;

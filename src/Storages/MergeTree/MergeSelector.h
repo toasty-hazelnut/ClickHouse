@@ -37,6 +37,7 @@ public:
         size_t size = 0;
 
         /// How old this data part in seconds.
+        // 
         time_t age = 0;
 
         /// Depth of tree of merges by which this part was created. New parts has zero level.
@@ -64,11 +65,13 @@ public:
     using PartsRange = std::vector<Part>;
 
     /// Parts are in some specific order. Parts could be merged only in contiguous ranges.
+    // 。。。？？
     using PartsRanges = std::vector<PartsRange>;
 
     /** Function could be called at any frequency and it must decide, should you do any merge at all.
       * If better not to do any merge, it returns empty result.
       */
+      // can be called at any frequency 。。。  实际是多久调用一次？
     virtual PartsRange select(
         const PartsRanges & parts_ranges,
         size_t max_total_size_to_merge) = 0;

@@ -70,7 +70,7 @@ private:
 
     std::shared_ptr<MarkCache> mark_cache;
     using MergeTreeReaderPtr = std::unique_ptr<IMergeTreeReader>;
-    MergeTreeReaderPtr reader;
+    MergeTreeReaderPtr reader;      // 
 
     /// current mark at which we stop reading
     size_t current_mark = 0;
@@ -162,7 +162,8 @@ MergeTreeSequentialSource::MergeTreeSequentialSource(
 
     if (!mark_ranges)
         mark_ranges.emplace(MarkRanges{MarkRange(0, data_part->getMarksCount())});
-
+    
+    // 设置成员 reader
     reader = data_part->getReader(
         columns_for_reader,
         storage_snapshot,
@@ -211,6 +212,7 @@ static void fillBlockNumberColumns(
     }
 }
 
+// 
 Chunk MergeTreeSequentialSource::generate()
 try
 {
@@ -226,7 +228,10 @@ try
 
         const auto & sample = reader->getColumns();
         Columns columns(sample.size());
-        size_t rows_read = reader->readRows(current_mark, num_marks_in_part, continue_reading, rows_to_read, columns);
+
+        // rows_to_read是多少？
+        // 参数的含义。。 比如num_marks_in_part 是干啥用的？
+        size_t rows_read = reader->readRows(current_mark /*from_mark*/, num_marks_in_part /*current_task_last_mark*/, continue_reading, rows_to_read /* max_rows_to_read */, columns);
 
         if (rows_read)
         {

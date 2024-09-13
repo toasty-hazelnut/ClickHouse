@@ -126,6 +126,7 @@ size_t MergeTreeBackgroundExecutor<Queue>::getMaxTasksCount() const
     return max_tasks_count.load(std::memory_order_relaxed);
 }
 
+// 如果load() > max_tasks_count, 则这个task无法schedule成功，无法加入到pending queue中
 template <class Queue>
 bool MergeTreeBackgroundExecutor<Queue>::trySchedule(ExecutableTaskPtr task)
 {
@@ -214,6 +215,8 @@ void MergeTreeBackgroundExecutor<Queue>::removeTasksCorrespondingToStorage(Stora
     }
 }
 
+// need_execute_again = item->task->executeStep();
+// 如果need_execute_again, 则继续放到pending中
 template <class Queue>
 void MergeTreeBackgroundExecutor<Queue>::routine(TaskRuntimeDataPtr item)
 {
@@ -283,7 +286,7 @@ void MergeTreeBackgroundExecutor<Queue>::routine(TaskRuntimeDataPtr item)
     {
         ALLOW_ALLOCATIONS_IN_SCOPE;
         query_id = item->task->getQueryId();
-        need_execute_again = item->task->executeStep();
+        need_execute_again = item->task->executeStep();  //
     }
     catch (...)
     {
@@ -325,7 +328,7 @@ void MergeTreeBackgroundExecutor<Queue>::routine(TaskRuntimeDataPtr item)
     }
 }
 
-
+// 從pending中移出一个item, 放到active中。routine(item)
 template <class Queue>
 void MergeTreeBackgroundExecutor<Queue>::threadFunction()
 {

@@ -46,6 +46,7 @@ String IColumn::dumpStructure() const
     return res.str();
 }
 
+// insert(src[n])
 #if !defined(DEBUG_OR_SANITIZER_BUILD)
 void IColumn::insertFrom(const IColumn & src, size_t n)
 #else
@@ -150,6 +151,7 @@ MutableColumns IColumnHelper<Derived, Parent>::scatter(IColumn::ColumnIndex num_
     return columns;
 }
 
+// gatherer.gather()
 template <typename Derived, typename Parent>
 void IColumnHelper<Derived, Parent>::gather(ColumnGathererStream & gatherer)
 {

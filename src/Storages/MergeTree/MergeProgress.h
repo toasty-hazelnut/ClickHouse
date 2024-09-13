@@ -73,6 +73,7 @@ public:
         if (stage.is_first)
         {
             ProfileEvents::increment(ProfileEvents::MergedRows, value.read_rows);
+            // ProfileEvents::Merge。。。
             ProfileEvents::increment(ProfileEvents::Merge);
         }
         updateWatch();

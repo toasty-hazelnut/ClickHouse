@@ -21,6 +21,7 @@ class MergeTreeTransaction;
 
 /// Commit Sequence Number
 using CSN = UInt64;
+
 /// Local part of TransactionID
 using LocalTID = UInt64;
 /// Hash of TransactionID that fits into 64-bit atomic

@@ -84,6 +84,7 @@ std::unique_lock<std::mutex> BackgroundSchedulePoolTaskInfo::getExecLock()
     return std::unique_lock{exec_mutex};
 }
 
+// 注意这个  task->execute()返回 void。   而bool MergeTask::execute()返回true表示需要继续执行
 void BackgroundSchedulePoolTaskInfo::execute()
 {
     Stopwatch watch;
@@ -102,7 +103,7 @@ void BackgroundSchedulePoolTaskInfo::execute()
     }
 
     try
-    {
+    {   //  执行TaskFunc
         function();
     }
     catch (...)
@@ -126,7 +127,7 @@ void BackgroundSchedulePoolTaskInfo::execute()
         /// In case was scheduled while executing (including a scheduleAfter which expired) we schedule the task
         /// on the queue. We don't call the function again here because this way all tasks
         /// will have their chance to execute
-
+        // ？
         if (scheduled)
             pool.scheduleTask(shared_from_this());
     }
@@ -142,6 +143,7 @@ void BackgroundSchedulePoolTaskInfo::scheduleImpl(std::lock_guard<std::mutex> & 
     /// If the task is not executing at the moment, enqueue it for immediate execution.
     /// But if it is currently executing, do nothing because it will be enqueued
     /// at the end of the execute() method.
+    // be enqued at the end of the execute() method?
     if (!executing)
         pool.scheduleTask(shared_from_this());
 }
@@ -165,7 +167,8 @@ BackgroundSchedulePool::BackgroundSchedulePool(size_t size_, CurrentMetrics::Met
     threads.resize(size_);
 
     try
-    {
+    {   
+        // 猜测 每个worker thread 都会执行 threadFunction
         for (auto & thread : threads)
             thread = ThreadFromGlobalPoolNoTracingContextPropagation([this] { threadFunction(); });
 
@@ -173,6 +176,7 @@ BackgroundSchedulePool::BackgroundSchedulePool(size_t size_, CurrentMetrics::Met
     }
     catch (...)
     {
+        // 从 global thread pool中get threads
         LOG_FATAL(
             getLogger("BackgroundSchedulePool/" + thread_name),
             "Couldn't get {} threads from global thread pool: {}",
@@ -222,6 +226,7 @@ BackgroundSchedulePool::~BackgroundSchedulePool()
         LOG_TRACE(getLogger("BackgroundSchedulePool/" + thread_name), "Waiting for threads to finish.");
         delayed_thread->join();
 
+        // 
         for (auto & thread : threads)
             thread.join();
     }
@@ -231,12 +236,14 @@ BackgroundSchedulePool::~BackgroundSchedulePool()
     }
 }
 
-
+// name： log_name   
+// 会成为TaskInfo中的 log_name，   LOG_TRACE(getLogger(log_name), "Execution took {} ms.", milliseconds);
 BackgroundSchedulePool::TaskHolder BackgroundSchedulePool::createTask(const std::string & name, const TaskFunc & function)
 {
     return TaskHolder(std::make_shared<TaskInfo>(*this, name, function));
 }
 
+// 加入到tasks queue中
 void BackgroundSchedulePool::scheduleTask(TaskInfoPtr task_info)
 {
     {
@@ -277,6 +284,7 @@ void BackgroundSchedulePool::cancelDelayedTask(const TaskInfoPtr & task, std::lo
 }
 
 
+// 每个worker thread会执行这个threadFunction: 不断从queue中取出task 执行
 void BackgroundSchedulePool::threadFunction()
 {
     setThreadName(thread_name.c_str());

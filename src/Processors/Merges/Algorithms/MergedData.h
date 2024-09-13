@@ -50,10 +50,11 @@ public:
     }
 
     /// Pull will be called at next prepare call.
-    // ?
+    // ?  谁会调用这个
     void flush() { need_flush = true; }
 
     // using ColumnRawPtrs = std::vector<const IColumn *>; see IColumn.h
+    // row:插第几行， block_size：cursor所指向的这个block一共有多少行
     void insertRow(const ColumnRawPtrs & raw_columns, size_t row, size_t block_size)
     {
         size_t num_columns = raw_columns.size();
@@ -129,7 +130,7 @@ public:
 
         need_flush = true;
         total_merged_rows += rows_size;
-        merged_rows = rows_size;
+        merged_rows = rows_size;  // 说明insertChunk时，是在merged_rows为0时调的
     }
 
     Chunk pull()
@@ -144,6 +145,7 @@ public:
         // 为何要这样swap一下？
         Chunk chunk(std::move(empty_columns), merged_rows);
 
+        // merged_rows置为0了
         merged_rows = 0;
         sum_blocks_granularity = 0;
         ++total_chunks;
@@ -158,7 +160,11 @@ public:
     {
         /// If full chunk was or is going to be inserted, then we must pull it.
         /// It is needed for fast-forward optimization.
-        // 猜测对应 insertChunk的情况
+        // insertChunk 会set need_flush to true 的情况
+        /* 感觉普通merge场景，调用hasEnoughRows()时 不会出现need_flush为true？ 因为除了flush(), 只有insertChunk中会设置need_flush为true
+        而MergingSortedAlgorithm中调用insertChunk()后，会返回Status(merged_data.pull(), limit_reached); merged_data.pull()会把need_flush设回false
+        于是下次调用hasEnoughRows()时，need_flush为false
+        */
         if (need_flush)
             return true;
 
@@ -176,6 +182,8 @@ public:
                 return true;
         }
 
+        // true for vertical merges, false for horizontal merges
+        // 也就是说，对于horizontal merges, 只有need_flush, >=max_block_size/max_block_size_bytes这3种情况，hasEnoughRows会返回true
         if (!use_average_block_size)
             return false;
 

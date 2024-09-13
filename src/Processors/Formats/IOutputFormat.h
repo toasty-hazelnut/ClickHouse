@@ -178,6 +178,7 @@ protected:
     /// that should be used in its derived classes.
     virtual WriteBuffer * getWriteBufferPtr() { return &out; }
 
+    // PullingOutputFormat 似乎没有用out, 构造时传进来的是nullptr
     WriteBuffer & out;
 
     Chunk current_chunk;
@@ -187,6 +188,7 @@ protected:
     bool finalized = false;
 
     /// Flush data on each consumed chunk. This is intended for interactive applications to output data as soon as it's ready.
+    // 。。。 为false，则for each consumed chunk, 不一定会flush？？
     bool auto_flush = false;
 
     bool need_write_prefix  = true;

@@ -212,7 +212,7 @@ void ExecutingGraph::initializeExecution(Queue & queue)
     }
 }
 
-
+// 
 bool ExecutingGraph::updateNode(uint64_t pid, Queue & queue, Queue & async_queue)
 {
     std::stack<Edge *> updated_edges;

@@ -18,6 +18,9 @@ BackgroundJobsAssignee::BackgroundJobsAssignee(MergeTreeData & data_, Background
 {
 }
 
+// scheduleMergeMutateTask中调用trigger时，holder要holder的应该是？？？  
+// 然后holder->schedule，会把这个merge task加入到bgSchedulePool的tasks queue中，于是worker threads会从queue中取task 并执行。
+// 这个
 void BackgroundJobsAssignee::trigger()
 {
     std::lock_guard lock(holder_mutex);
@@ -51,10 +54,15 @@ void BackgroundJobsAssignee::postpone()
     holder->scheduleAfter(next_time_to_execute, false);
 }
 
-
+// 在哪里被调？
+// 返回是否scheduled
 bool BackgroundJobsAssignee::scheduleMergeMutateTask(ExecutableTaskPtr merge_task)
-{
+{   
+    // getMergeMutateExecutor() 返回 shared_ptr<MergeMutateBackgroundExecutor>
+    // "using MergeMutateBackgroundExecutor = MergeTreeBackgroundExecutor<DynamicRuntimeQueue>;"
     bool res = getContext()->getMergeMutateExecutor()->trySchedule(merge_task);
+
+    // 加入到MergeTreeBackgroundExecutor的pending queue中，为何这里还要调trigger()??
     res ? trigger() : postpone();
     return res;
 }
@@ -95,6 +103,7 @@ String BackgroundJobsAssignee::toString(Type type)
     }
 }
 
+// start中设置了holder
 void BackgroundJobsAssignee::start()
 {
     std::lock_guard lock(holder_mutex);
@@ -120,7 +129,8 @@ void BackgroundJobsAssignee::finish()
     }
 }
 
-
+// 在
+// (这里try catch外面没有函数体的大括号吗？)
 void BackgroundJobsAssignee::threadFunc()
 try
 {
@@ -128,6 +138,7 @@ try
     switch (type)
     {
         case Type::DataProcessing:
+            // MergeTreeData data
             succeed = data.scheduleDataProcessingJob(*this);
             break;
         case Type::Moving:

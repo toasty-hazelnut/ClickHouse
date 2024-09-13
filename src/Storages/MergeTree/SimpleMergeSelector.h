@@ -13,9 +13,13 @@ It can be also considered as the total amount of work for merges.
 2. The number of data parts in the set at the random moment of time (average + quantiles).
 
 Also taking the following considerations:
-1. Older data parts should be merged less frequently than newer data parts.
+1. Older data parts should be merged less frequently than newer data parts.   
+// 这里确实像昼星知乎文章说的，矛盾：对于older parts, allow()的门槛更高还是更低？根据这里，要更高
+// 但" Minimum age of parts participating in merge. If higher age - then base is lowered." 要更低
+// 代码实现中，age越大 base越小，门槛越低。
+// 
 2. Larger data parts should be merged less frequently than smaller data parts.
-3. If no new parts arrive, we should continue to merge existing data parts to eventually optimize the table.
+3. If no new parts arrive, we should continue to merge existing data parts to eventually optimize the table.  。。。w 这个触发在哪里
 4. Never allow too many parts, because it will slow down SELECT queries significantly.
 5. Multiple background merges can run concurrently but not too many.
 
@@ -23,19 +27,20 @@ It is not possible to optimize both metrics, because they contradict to each oth
 To lower the number of parts we can merge eagerly but write amplification will increase.
 Then we need some balance between optimization of these two metrics.
 
-But some optimizations may improve both metrics.
+But some optimizations may improve both metrics.  // .。。。
 
+// 
 For example, we can look at the "merge tree" - the tree of data parts that were merged.
 If the tree is perfectly balanced then its depth is proportional to the log(data size),
 the total amount of work is proportional to data_size * log(data_size)
 and the write amplification is proportional to log(data_size).
-If it's not balanced (e.g. every new data part is always merged with existing data parts),
+If it's not balanced (e.g. every new data part is always merged with existing data parts), // ...
 its depth is proportional to the data size, total amount of work is proportional to data_size^2.
 
 We can also control the "base of the logarithm" - you can look it as the number of data parts
 that are merged at once (the tree "arity"). But as the data parts are of different size, we should generalize it:
 calculate the ratio between total size of merged parts to the size of the largest part participated in merge.
-For example, if we merge 4 parts of size 5, 3, 1, 1 - then "base" will be 2 (10 / 5).
+For example, if we merge 4 parts of size 5, 3, 1, 1 - then "base" will be 2 (10 / 5).  //。。。含义 //。。。统计信息中实际的merge是符合 > base的吗？
 
 Base of the logarithm (simply called `base` in `SimpleMergeSelector`) is the main knob to control the write amplification.
 The more it is, the less is write amplification but we will have more data parts on average.
@@ -46,18 +51,18 @@ looking like a section of hyperplane).
 
 
 Then we apply the algorithm to select the optimal range of data parts to merge.
-There is a proof that this algorithm is optimal if we look in the future only by single step.
+There is a proof that this algorithm is optimal if we look in the future only by single step.  // 。。。？ 
 
 The best range of data parts is selected.
 
 We also apply some tunes:
 - there is a fixed const of merging small parts (that is added to the size of data part before all estimations);
-- there are some heuristics to "stick" ranges to large data parts.
+- there are some heuristics to "stick" ranges to large data parts.  // 。。。
 
 It's still unclear if this algorithm is good or optimal at all. It's unclear if this algorithm is using the optimal coefficients.
 
 To test and optimize SimpleMergeSelector, we apply the following methods:
-- insert/merge simulator: a model simulating parts insertion and merging;
+- insert/merge simulator: a model simulating parts insertion and merging;  // 这个simulator在哪？？。。
 merge selecting algorithm is applied and the relevant metrics are calculated to allow to tune the algorithm;
 - insert/merge simulator on real `system.part_log` from production - it gives realistic information about inserted data parts:
 their sizes, at what time intervals they are inserted;
@@ -111,14 +116,15 @@ public:
           *
           * 2. Minimum age of parts participating in merge. If higher age - then base is lowered.
           * It means: do less wide merges only rarely.
-          *
+          * 如果age更高，则更容易allow返回true   . 看下代码中是不是这样。。。
+          以及，如果是，为何
           * 3. Sum size of parts participating in merge. If higher - then more age is required to lower base. So, base is lowered slower.
-          * It means: for small parts, it's worth to merge faster, even not so wide or balanced.
-          *
+          * It means: for small parts, it's worth to merge faster, even not so wide or balanced.  // 'even not so wide or balanced'
+          * 。。。
           * We have multivariative dependency. Let it be logarithmic of size and somewhat multi-linear by other variables,
-          *  between some boundary points, and constant outside.
+          *  between some boundary points, and constant outside.  // 。。logarithmic of siz and multi-linear by other variables
           */
-
+          // 何时base 会成为1？？？  lowered_base只是在2和5之间？
         size_t min_size_to_lower_base = 1024 * 1024;
         size_t max_size_to_lower_base = 100ULL * 1024 * 1024 * 1024;
 
@@ -131,11 +137,13 @@ public:
         size_t max_parts_to_lower_base = 50;
 
         /// Add this to size before all calculations. It means: merging even very small parts has it's fixed cost.
+        // 
         size_t size_fixed_cost_to_add = 5 * 1024 * 1024;
 
         /** Heuristic:
           * Make some preference for ranges, that sum_size is like (in terms of ratio) to part previous at left.
           */
+          // 。。。
         bool enable_heuristic_to_align_parts = true;
         double heuristic_to_align_parts_min_ratio_of_sum_size_to_prev_part = 0.9;
         double heuristic_to_align_parts_max_absolute_difference_in_powers_of_two = 0.5;
@@ -149,6 +157,7 @@ public:
         /** Heuristic:
           * From right side of range, remove all parts, that size is less than specified ratio of sum_size.
           */
+          // 。。。
         bool enable_heuristic_to_remove_small_parts_at_right = true;
         double heuristic_to_remove_small_parts_at_right_max_ratio = 0.01;
     };

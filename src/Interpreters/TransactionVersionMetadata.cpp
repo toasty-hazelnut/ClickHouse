@@ -132,6 +132,7 @@ bool VersionMetadata::isVisible(const MergeTreeTransaction & txn)
     return isVisible(txn.getSnapshot(), txn.tid);
 }
 
+// 。。。
 bool VersionMetadata::isVisible(CSN snapshot_version, TransactionID current_tid)
 {
     chassert(!creation_tid.isEmpty());

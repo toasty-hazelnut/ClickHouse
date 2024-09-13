@@ -22,7 +22,8 @@ using OutputPortRawPtrs = std::vector<OutputPort *>;
 /// Pipe is a set of processors which represents the part of pipeline.
 /// Pipe contains a list of output ports, with specified port for totals and specified port for extremes.
 /// All output ports have same header.
-/// All other ports are connected, all connections are inside processors set.
+/// All other ports are connected, all connections are inside processors set. （比如created from processors时， 这些processors中的input ports需要都是connected, 而且connection within the processors set） 
+// 。。。
 class Pipe
 {
 public:
@@ -61,6 +62,9 @@ public:
     /// Drop totals and extremes (create NullSink for them).
     void dropTotals();
     void dropExtremes();
+
+// addSource, addTranform都是 add processor to list
+
 
     /// Add processor to list. It should have size() input ports with compatible header.
     /// Output ports should have same headers.
@@ -119,7 +123,7 @@ private:
     OutputPort * totals_port = nullptr;
     OutputPort * extremes_port = nullptr;
 
-    /// It is the max number of processors which can be executed in parallel for each step.
+    /// It is the max number of processors which can be executed in parallel for each step.  each step指的是啥？
     /// Usually, it's the same as the number of output ports.
     size_t max_parallel_streams = 0;
 
@@ -127,8 +131,9 @@ private:
     /// It is needed for debug. See QueryPipelineProcessorsCollector.
     Processors * collected_processors = nullptr;
 
-    /// This methods are for QueryPipeline. It is allowed to complete graph only there.
+    /// This methods are for QueryPipeline. It is allowed to complete graph only there. 。。。？
     /// So, we may be sure that Pipe always has output port if not empty.
+    // 是希望一定返回!isCompleted()的意思？
     bool isCompleted() const { return !empty() && output_ports.empty(); }
     static Pipe unitePipes(Pipes pipes, Processors * collected_processors, bool allow_empty_header);
     void setSinks(const Pipe::ProcessorGetterWithStreamKind & getter);

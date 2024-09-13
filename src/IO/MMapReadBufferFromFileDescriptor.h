@@ -11,7 +11,7 @@ namespace DB
   * Please note that mmap is not always the optimal way to read file.
   * Also you cannot control whether and how long actual IO take place,
   *  so this method is not manageable and not recommended for anything except benchmarks.
-  */
+  */  // ???
 class MMapReadBufferFromFileDescriptor : public ReadBufferFromFileBase
 {
 public:

@@ -9,12 +9,13 @@ namespace DB
   * Data is split in granules and columns are serialized sequentially in one granule.
   * Granules are written one by one in data file.
   * Marks are also stored in single file (`data.mrk3`).
-  * In compact format one mark is an array of marks for every column and a number of rows in granule.
+  * In compact format one mark is an array of marks for every column and a number of rows in granule.  // ？ 是说one mark是对一个granule中的各个列的marks吗？
   * Format of other data part files is not changed.
   * It's considered to store only small parts in compact format (up to 10M).
   * NOTE: Compact parts aren't supported for tables with non-adaptive granularity.
   * NOTE: In compact part compressed and uncompressed size of single column is unknown.
   */
+  // 
 class MergeTreeDataPartCompact : public IMergeTreeDataPart
 {
 public:

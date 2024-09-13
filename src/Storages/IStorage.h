@@ -181,6 +181,7 @@ public:
 
     /// Requires squashing small blocks to large for optimal storage.
     /// This is true for most storages that store data on disk.
+    // 。。。
     virtual bool prefersLargeBlocks() const { return true; }
 
     /// Returns true if the storage is for system, which cannot be target of SHOW CREATE TABLE.
@@ -523,6 +524,7 @@ public:
     /** Perform any background work. For example, combining parts in a MergeTree type table.
       * Returns whether any work has been done.
       */
+      // 
     virtual bool optimize(
         const ASTPtr & /*query*/,
         const StorageMetadataPtr & /*metadata_snapshot*/,

@@ -33,6 +33,7 @@ public:
         , table_lock_holder(std::move(table_lock_holder_))
         , task_result_callback(task_result_callback_)
     {
+        // priority
         for (auto & item : merge_mutate_entry->future_part->parts)
             priority.value += item->getBytesOnDisk();
     }
@@ -70,19 +71,21 @@ private:
     bool deduplicate;
     Names deduplicate_by_columns;
     bool cleanup;
-    MergeMutateSelectedEntryPtr merge_mutate_entry{nullptr};
+    MergeMutateSelectedEntryPtr merge_mutate_entry{nullptr};    // ...
     TableLockHolder table_lock_holder;
-    FutureMergedMutatedPartPtr future_part{nullptr};
-    MergeTreeData::MutableDataPartPtr new_part;
+    FutureMergedMutatedPartPtr future_part{nullptr};            //..
+    MergeTreeData::MutableDataPartPtr new_part;                 // ...
     std::unique_ptr<Stopwatch> stopwatch_ptr{nullptr};
     using MergeListEntryPtr = std::unique_ptr<MergeListEntry>;
     MergeListEntryPtr merge_list_entry;
 
-    Priority priority;
+    Priority priority;   //
 
     std::function<void(const ExecutionStatus &)> write_part_log;
     std::function<void()> transfer_profile_counters_to_initial_query;
     IExecutableTask::TaskResultCallback task_result_callback;
+
+    // MergeTaskPtr类型  shared_ptr<MergeTask>
     MergeTaskPtr merge_task{nullptr};
 
     MergeTreeTransactionHolder txn_holder;

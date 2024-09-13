@@ -91,7 +91,7 @@ public:
     /// Only for pushing.
     void complete(Pipe pipe);
     /// Only for pulling.
-    void complete(std::shared_ptr<IOutputFormat> format);
+    void complete(std::shared_ptr<IOutputFormat> format);   // PullingPipelineExecutor(QueryPipeline p)构造函数中，调用了p.complete(PullingOutputFormat)
     void complete(Chain chain);
     void complete(std::shared_ptr<SinkToStorage> sink);
     void complete(std::shared_ptr<ISink> sink);
@@ -149,6 +149,7 @@ private:
     std::shared_ptr<const EnabledQuota> quota;
     bool update_profile_events = true;
 
+    // 
     std::shared_ptr<Processors> processors;
 
     InputPort * input = nullptr;
@@ -159,6 +160,7 @@ private:
 
     QueryStatusPtr process_list_element;
 
+    // 
     IOutputFormat * output_format = nullptr;
 
     size_t num_threads = 0;

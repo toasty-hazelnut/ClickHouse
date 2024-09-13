@@ -19,7 +19,7 @@ public:
         // 只会用于赋值给next_input_to_read, state.next_input_to_read = status.required_source; 只会在这里被用到
         ssize_t required_source = -1;
 
-        explicit Status(Chunk chunk_) : chunk(std::move(chunk_)) {}
+        explicit Status(Chunk chunk_) : chunk(std::move(chunk_)) {}   // 。。。。。。move
         explicit Status(Chunk chunk_, bool is_finished_) : chunk(std::move(chunk_)), is_finished(is_finished_) {}
         explicit Status(size_t source) : required_source(source) {}
     };

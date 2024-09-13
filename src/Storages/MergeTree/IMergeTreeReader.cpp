@@ -56,9 +56,11 @@ IMergeTreeReader::IMergeTreeReader(
     columns_to_read.reserve(requested_columns.size());
     serializations.reserve(requested_columns.size());
 
+    // NamesAndTypesList requested_columns
+    // NamesAndTypes columns_to_read;
     for (const auto & column : requested_columns)
     {
-        columns_to_read.emplace_back(getColumnInPart(column));
+        columns_to_read.emplace_back(getColumnInPart(column));      // 从const ColumnsDescription & part_columns;中
         serializations.emplace_back(getSerializationInPart(column));
     }
 }
@@ -238,6 +240,8 @@ String IMergeTreeReader::getColumnNameInPart(const NameAndTypePair & required_co
 NameAndTypePair IMergeTreeReader::getColumnInPart(const NameAndTypePair & required_column) const
 {
     auto name_in_part = getColumnNameInPart(required_column);
+
+    // part_columns为ColumnsDescription，从中try get column
     auto column_in_part = part_columns.tryGetColumnOrSubcolumn(GetColumnsOptions::AllPhysical, name_in_part);
     if (column_in_part)
         return *column_in_part;

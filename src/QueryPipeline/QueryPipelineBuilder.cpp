@@ -668,6 +668,7 @@ Pipe QueryPipelineBuilder::getPipe(QueryPipelineBuilder pipeline, QueryPlanResou
     return std::move(pipeline.pipe);
 }
 
+// 
 QueryPipeline QueryPipelineBuilder::getPipeline(QueryPipelineBuilder builder)
 {
     QueryPipeline res(std::move(builder.pipe));     // 给builder添加的transforms 在pipe中

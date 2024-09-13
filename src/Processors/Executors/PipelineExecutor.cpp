@@ -256,6 +256,9 @@ void PipelineExecutor::executeSingleThread(size_t thread_num)
 #endif
 }
 
+// yield_flag为true时返回
+// 这里和work(), prepare()的调用相关
+//  比如updateNode中会调prepare 。。。 看下还有哪里会调prepare.。。
 void PipelineExecutor::executeStepImpl(size_t thread_num, std::atomic_bool * yield_flag)
 {
 #ifndef NDEBUG

@@ -71,7 +71,7 @@ struct ReadSettings
     RemoteFSReadMethod remote_fs_method = RemoteFSReadMethod::threadpool;
 
     /// https://eklitzke.org/efficient-file-copying-on-linux
-    size_t local_fs_buffer_size = 128 * 1024;
+    size_t local_fs_buffer_size = 128 * 1024;  // 
 
     size_t remote_fs_buffer_size = DBMS_DEFAULT_BUFFER_SIZE;
     size_t prefetch_buffer_size = DBMS_DEFAULT_BUFFER_SIZE;

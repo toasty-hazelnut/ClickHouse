@@ -29,7 +29,8 @@ void MergePlainMergeTreeTask::onCompleted()
     task_result_callback(delay);
 }
 
-// 
+// 会被调用多次。 谁来调用它的executeStep?
+// 似乎是void MergeTreeBackgroundExecutor<Queue>::routine(TaskRuntimeDataPtr item) { ...executeStep() // 返回true，则继续放到pending中 }  
 bool MergePlainMergeTreeTask::executeStep()
 {
     /// All metrics will be saved in the thread_group, including all scheduled tasks.
@@ -55,6 +56,7 @@ bool MergePlainMergeTreeTask::executeStep()
         {
             try
             {
+                // 返回true表示需要继续执行
                 if (merge_task->execute())
                     return true;
 
@@ -81,7 +83,7 @@ bool MergePlainMergeTreeTask::executeStep()
     }
 }
 
-
+// ...
 void MergePlainMergeTreeTask::prepare()
 {
     future_part = merge_mutate_entry->future_part;
@@ -121,6 +123,7 @@ void MergePlainMergeTreeTask::prepare()
         }
     };
 
+    // 。。。
     merge_task = storage.merger_mutator.mergePartsToTemporaryPart(
             future_part,
             metadata_snapshot,
@@ -137,7 +140,7 @@ void MergePlainMergeTreeTask::prepare()
             txn);
 }
 
-
+// 
 void MergePlainMergeTreeTask::finish()
 {
     new_part = merge_task->getFuture().get();

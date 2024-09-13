@@ -119,6 +119,7 @@ void MergeTreeReaderWide::prefetchForAllColumns(
     }
 }
 
+// 
 size_t MergeTreeReaderWide::readRows(
     size_t from_mark, size_t current_task_last_mark, bool continue_reading, size_t max_rows_to_read, Columns & res_columns)
 {
@@ -304,8 +305,8 @@ ReadBuffer * MergeTreeReaderWide::getStream(
         it = addStream(substream_path, *stream_name);
     }
 
-    MergeTreeReaderStream & stream = *it->second;
-    stream.adjustRightMark(current_task_last_mark);
+    MergeTreeReaderStream & stream = *it->second;  // streams 为 map<std::string, std::unique_ptr<MergeTreeReaderStream>>;
+    stream.adjustRightMark(current_task_last_mark); //  current_task_last mark is needed for asynchronous reading (mainly from remote fs).
 
     if (seek_to_start)
         stream.seekToStart();
@@ -366,7 +367,7 @@ void MergeTreeReaderWide::prefetchForColumn(
     serialization->enumerateStreams(settings, callback, data);
 }
 
-
+// 
 void MergeTreeReaderWide::readData(
     const NameAndTypePair & name_and_type,
     const SerializationPtr & serialization,
@@ -389,6 +390,7 @@ void MergeTreeReaderWide::readData(
     {
         bool seek_to_mark = !was_prefetched && !continue_reading && !read_without_marks;
 
+        // 从streams中找一个stream，会调整这个stream，并返回stream.getDataBuffer();
         return getStream(
             /* seek_to_start = */false, substream_path,
             data_part_info_for_read->getChecksums(),

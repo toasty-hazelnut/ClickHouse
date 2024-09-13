@@ -48,7 +48,7 @@ std::string ReadBufferFromFileDescriptor::getFileName() const
     return "(fd = " + toString(fd) + ")";
 }
 
-
+// 读了超过min_bytes就可以返回了
 size_t ReadBufferFromFileDescriptor::readImpl(char * to, size_t min_bytes, size_t max_bytes, size_t offset) const
 {
     chassert(min_bytes <= max_bytes);
@@ -69,6 +69,7 @@ size_t ReadBufferFromFileDescriptor::readImpl(char * to, size_t min_bytes, size_
         {
             CurrentMetrics::Increment metric_increment{CurrentMetrics::Read};
 
+            // 
             if (use_pread)
                 res = ::pread(fd, to + bytes_read, to_read, offset + bytes_read);
             else
@@ -115,19 +116,21 @@ size_t ReadBufferFromFileDescriptor::readImpl(char * to, size_t min_bytes, size_
     return bytes_read;
 }
 
-
+// 
 bool ReadBufferFromFileDescriptor::nextImpl()
 {
     /// If internal_buffer size is empty, then read() cannot be distinguished from EOF
     assert(!internal_buffer.empty());
 
-    size_t bytes_read = readImpl(internal_buffer.begin(), 1, internal_buffer.size(), file_offset_of_buffer_end);
+    // internal_buffer是BufferBase成员
+    // internal_buffer.size() 对于merge时读 应该是128*1024
+    size_t bytes_read = readImpl(internal_buffer.begin(), 1 /*min_bytes*/, internal_buffer.size() /*max_bytes*/, file_offset_of_buffer_end);
 
     file_offset_of_buffer_end += bytes_read;
 
     if (bytes_read)
     {
-        working_buffer = internal_buffer;
+        working_buffer = internal_buffer;  // 
         working_buffer.resize(bytes_read);
     }
     else

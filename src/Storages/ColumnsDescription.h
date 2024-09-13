@@ -80,6 +80,7 @@ struct GetColumnsOptions
 };
 
 /// Description of a single table column (in CREATE TABLE for example).
+// 
 struct ColumnDescription
 {
     String name;
@@ -259,6 +260,7 @@ private:
     /// - .null  for Nullable
     ///
     /// While nested columns have form like foo.bar
+    // 
     SubcolumnsContainter subcolumns;
 
     void modifyColumnOrder(const String & column_name, const String & after_column, bool first);

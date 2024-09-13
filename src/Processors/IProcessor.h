@@ -182,6 +182,8 @@ public:
       * - method 'prepare' cannot be executed in parallel even for different objects,
       *   if they are connected (including indirectly) to each other by their ports;
       */
+      // 不同processors的prepare虽然无法同时进行，但prepare做cheap的操作，所以ok。
+      // 不同processors的work可以同时进行
     virtual Status prepare()
     {
         throw Exception(ErrorCodes::NOT_IMPLEMENTED, "Method 'prepare' is not implemented for {} processor", getName());
@@ -395,6 +397,7 @@ private:
     /// For
     /// - input_wait_elapsed_ns
     /// - output_wait_elapsed_ns
+    // 可看。。
     friend class ExecutingGraph;
 
     std::string processor_description;

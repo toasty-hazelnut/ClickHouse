@@ -176,11 +176,11 @@ public:
     }
 
     /** Reads as many as there are, no more than n bytes. */
-    [[nodiscard]] size_t read(char * to, size_t n)
+    [[nodiscard]] size_t read(char * to, size_t n)  
     {
         size_t bytes_copied = 0;
 
-        while (bytes_copied < n && !eof())
+        while (bytes_copied < n && !eof())  // eof()中如果!hasPendingData(), 则会调next()。 
         {
             size_t bytes_to_copy = std::min(static_cast<size_t>(working_buffer.end() - pos), n - bytes_copied);
             ::memcpy(to + bytes_copied, pos, bytes_to_copy);
@@ -259,6 +259,7 @@ private:
       * Return `false` in case of the end, `true` otherwise.
       * Throw an exception if something is wrong.
       */
+      // 这个父类中的nextImpl是否会被调？
     virtual bool nextImpl() { return false; }
 
     [[noreturn]] static void throwReadAfterEOF()

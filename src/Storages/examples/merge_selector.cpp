@@ -10,12 +10,18 @@
   * clickhouse-client --query="SELECT 100 + round(10 * rand() / 0xFFFFFFFF) FROM system.numbers LIMIT 105" | tr '\n' ' ' | ./merge_selector
   */
 
+ /*
+ 96 1 1 1 1 会merge
+ 97 1 1 1 1 会一直输出.
+ */ 
+
 int main(int, char **)
 {
     using namespace DB;
 
     IMergeSelector::PartsRanges partitions(1);
     IMergeSelector::PartsRange & parts = partitions.back();
+    // 所有parts 都放到 PartsRanges[0] 中，都在一个PartsRange中
 
     SimpleMergeSelector::Settings settings;
 //    settings.base = 2;
@@ -25,7 +31,7 @@ int main(int, char **)
 /*    LevelMergeSelector::Settings settings;
     settings.min_parts_to_merge = 8;
     settings.max_parts_to_merge = 16;
-    LevelMergeSelector selector(settings);*/
+    LevelMergeSelector selector(settings);*/  // 没找到LevelMergeSelector这个类？
 
     ReadBufferFromFileDescriptor in(STDIN_FILENO);
 
@@ -38,10 +44,10 @@ int main(int, char **)
         skipWhitespaceIfAny(in);
 
         IMergeSelector::Part part;
-        part.size = size;
+        part.size = size;     // in bytes
         part.age = 0;
         part.level = 0;
-        part.data = reinterpret_cast<const void *>(parts.size());
+        part.data = reinterpret_cast<const void *>(parts.size());  // data的类型 类似于  DataPartPtr * 
 
         parts.emplace_back(part);
 
@@ -52,17 +58,21 @@ int main(int, char **)
     size_t num_merges = 1;
 
     while (parts.size() > 1)
-    {
+    {   
+        // select(PartsRanges, );
         IMergeSelector::PartsRange selected_parts = selector.select(partitions, 0);
 
         if (selected_parts.empty())
         {
             std::cout << '.';
             for (auto & part : parts)
-                ++part.age;
+                //
+                ++part.age;  // part.age: how old this data part in seconds
+                // 这个测试中，age只有在select没选出parts时，给所有parts age++  (这样好像不太合理？？
+                // 实际中，age是怎样变的。。。？  
             continue;
         }
-        std::cout << '\n';
+        std::cout << '\n';  // 如果选择了parts, 各parts的age是否会增加？
 
         size_t sum_merged_size = 0;
         size_t start_index = 0;
@@ -79,7 +89,9 @@ int main(int, char **)
             }
 
             std::cout << parts[i].size;
-            if (in_range)
+
+            // // 由这个in_range, 可知selector.select(PartsRanges,); 会在参数的PartsRanges中的一个PartsRange中选，且选其中连续的Part
+            if (in_range)   
             {
                 sum_merged_size += parts[i].size;
                 max_level = std::max(parts[i].level, max_level);
@@ -106,10 +118,13 @@ int main(int, char **)
     }
 
     std::cout << std::fixed << std::setprecision(2)
+        // write amplification: 
         << "Write amplification: " << static_cast<double>(sum_size_written) / sum_parts_size << "\n"
         << "Num merges: " << num_merges << "\n"
         << "Tree depth: " << parts.front().level << "\n"
         ;
+
+    // 
 
     return 0;
 }

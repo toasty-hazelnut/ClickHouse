@@ -26,6 +26,7 @@ size_t MergeTreeIndexGranularity::getMarkRows(size_t mark_index) const
         return marks_rows_partial_sums[mark_index] - marks_rows_partial_sums[mark_index - 1];
 }
 
+// 
 size_t MergeTreeIndexGranularity::getMarkStartingRow(size_t mark_index) const
 {
     if (mark_index == 0)

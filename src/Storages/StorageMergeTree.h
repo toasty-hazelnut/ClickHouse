@@ -109,6 +109,7 @@ public:
     DataValidationTasksPtr getCheckTaskList(const CheckTaskFilter & check_task_filter, ContextPtr context) override;
     std::optional<CheckResult> checkDataNext(DataValidationTasksPtr & check_task_list) override;
 
+    // ... 在哪被调？
     bool scheduleDataProcessingJob(BackgroundJobsAssignee & assignee) override;
 
     std::map<std::string, MutationCommands> getUnfinishedMutationCommands() const override;
@@ -123,7 +124,7 @@ private:
 
     MergeTreeDataSelectExecutor reader;
     MergeTreeDataWriter writer;
-    MergeTreeDataMergerMutator merger_mutator;
+    MergeTreeDataMergerMutator merger_mutator;  // 
 
     std::unique_ptr<MergeTreeDeduplicationLog> deduplication_log;
 
@@ -139,11 +140,13 @@ private:
 
     /// Mutex for parts currently processing in background
     /// merging (also with TTL), mutating or moving.
+    // ...
     mutable std::mutex currently_processing_in_background_mutex;
     mutable std::condition_variable currently_processing_in_background_condition;
 
     /// Parts that currently participate in merge or mutation.
     /// This set have to be used with `currently_processing_in_background_mutex`.
+    // ...
     DataParts currently_merging_mutating_parts;
 
     std::map<UInt64, MergeTreeMutationEntry> current_mutations_by_version;
@@ -170,6 +173,7 @@ private:
       * If aggressive - when selects parts don't takes into account their ratio size and novelty (used for OPTIMIZE query).
       * Returns true if merge is finished successfully.
       */
+      //...。。。。。。。   是不是不只用于optimize query啊，否则meta_log_v1的base为啥是1 ？？ 
     bool merge(
             bool aggressive,
             const String & partition_id,
@@ -190,6 +194,7 @@ private:
 
     /// Allocate block number for new mutation, write mutation to disk
     /// and into in-memory structures. Wake up merge-mutation task.
+    // 之后看mutation时可看..
     Int64 startMutation(const MutationCommands & commands, ContextPtr query_context);
     /// Wait until mutation with version will finish mutation for all parts
     void waitForMutation(Int64 version, bool wait_for_another_mutation);
@@ -227,6 +232,9 @@ private:
     /// When two parts all_1_1_0, all_3_3_0 are merged into all_1_3_1, the gap between those parts have to be verified.
     /// There should not be an unactive part all_1_1_1. Otherwise it is impossible to load parts after restart, they intersects.
     /// Therefore this function is used in merge predicate in order to prevent merges over the gaps with high level outdated parts.
+    // ....    merge all_1_1_0和all_3_3_0时二者是active的？ 为何可能出现 unactive all_1_1_1???
+    // 'to prevent merges over the gaps with ' 没有gaps的会有这个问题吗？？
+    // 为何会impossible to load parts after restart? all_1_1_1不是inactive的吗？会load inactive parts?
     UInt32 getMaxLevelInBetween(
         const DataPartPtr & left,
         const DataPartPtr & right) const;

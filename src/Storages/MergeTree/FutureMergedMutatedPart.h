@@ -14,12 +14,13 @@ namespace DB
 class MergeTreeData;
 
 /// Auxiliary struct holding metainformation for the future merged or mutated part.
+// 
 struct FutureMergedMutatedPart
 {
     String name;
     UUID uuid = UUIDHelpers::Nil;
     String path;
-    MergeTreeDataPartFormat part_format;
+    MergeTreeDataPartFormat part_format;   // wide / compact
     MergeTreePartInfo part_info;
     MergeTreeData::DataPartsVector parts;
     MergeType merge_type = MergeType::Regular;

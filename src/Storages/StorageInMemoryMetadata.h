@@ -39,6 +39,7 @@ struct StorageInMemoryMetadata
     KeyDescription primary_key;
     /// ORDER BY expression. Required field for all MergeTree tables
     /// even in old syntax MergeTree(partition_key, order_by, ...)
+    // 
     KeyDescription sorting_key;
     /// SAMPLE BY expression. Supported for MergeTree only.
     KeyDescription sampling_key;
@@ -239,6 +240,7 @@ struct StorageInMemoryMetadata
     /// Returns ASTExpressionList of primary key expression for storage or nullptr if there is none.
     ASTPtr getPrimaryKeyAST() const { return primary_key.definition_ast; }
     /// Storage has user-defined (in CREATE query) sorting key.
+    //
     bool isPrimaryKeyDefined() const;
     /// Storage has primary key (maybe part of some other key). It means, that
     /// it contains at least one column.

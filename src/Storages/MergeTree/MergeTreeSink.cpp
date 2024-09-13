@@ -74,6 +74,7 @@ void MergeTreeSink::onFinish()
     finishDelayedChunk();
 }
 
+// 。。。
 void MergeTreeSink::consume(Chunk & chunk)
 {
     if (num_blocks_processed > 0)
@@ -143,7 +144,7 @@ void MergeTreeSink::consume(Chunk & chunk)
         if (settings.max_insert_delayed_streams_for_parallel_write.changed)
             max_insert_delayed_streams_for_parallel_write = settings.max_insert_delayed_streams_for_parallel_write;
         else if (support_parallel_write)
-            max_insert_delayed_streams_for_parallel_write = DEFAULT_DELAYED_STREAMS_FOR_PARALLEL_WRITE;
+            max_insert_delayed_streams_for_parallel_write = DEFAULT_DELAYED_STREAMS_FOR_PARALLEL_WRITE;  // 1000
         else
             max_insert_delayed_streams_for_parallel_write = 0;
 
@@ -152,7 +153,7 @@ void MergeTreeSink::consume(Chunk & chunk)
 
         if (streams > max_insert_delayed_streams_for_parallel_write)
         {
-            finishDelayedChunk();
+            finishDelayedChunk();   // 。。
             delayed_chunk = std::make_unique<MergeTreeSink::DelayedChunk>();
             delayed_chunk->partitions = std::move(partitions);
             finishDelayedChunk();
@@ -233,6 +234,7 @@ void MergeTreeSink::finishDelayedChunk()
             StorageMergeTree::incrementInsertedPartsProfileEvent(part->getType());
 
             /// Initiate async merge - it will be done if it's good time for merge and if there are space in 'background_pool'.
+            // 。。。。。。。 
             storage.background_operations_assignee.trigger();
         }
     }

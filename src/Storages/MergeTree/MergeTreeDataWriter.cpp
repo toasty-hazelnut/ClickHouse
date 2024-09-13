@@ -428,6 +428,7 @@ MergeTreeDataWriter::TemporaryPart MergeTreeDataWriter::writeTempPartWithoutPref
 }
 
 // 只是写一个block
+// 但这一个block好像就对应一个new part??
 MergeTreeDataWriter::TemporaryPart MergeTreeDataWriter::writeTempPartImpl(
     BlockWithPartition & block_with_partition,
     const StorageMetadataPtr & metadata_snapshot,

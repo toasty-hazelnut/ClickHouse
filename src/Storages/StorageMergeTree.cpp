@@ -108,7 +108,7 @@ StorageMergeTree::StorageMergeTree(
 {
     initializeDirectoriesAndFormatVersion(relative_data_path_, LoadingStrictnessLevel::ATTACH <= mode, date_column_name);
 
-
+    // 是MergeTreeData中定义的方法 
     loadDataParts(LoadingStrictnessLevel::FORCE_RESTORE <= mode, std::nullopt);
 
     if (mode < LoadingStrictnessLevel::ATTACH && !getDataPartsForInternalUsage().empty() && !isStaticStorage())
@@ -417,6 +417,7 @@ void StorageMergeTree::alter(
 
 
 /// While exists, marks parts as 'currently_merging_mutating_parts' and reserves free space on filesystem.
+// ?
 CurrentlyMergingPartsTagger::CurrentlyMergingPartsTagger(
     FutureMergedMutatedPartPtr future_part_,
     size_t total_size,
@@ -947,6 +948,8 @@ void StorageMergeTree::loadMutations()
         increment.value = std::max(increment.value.load(), current_mutations_by_version.rbegin()->first);
 }
 
+// scheduleDataProcessingJob中传进来的参数 (metadata_snapshot, false, {}, false, out_reason, shared_lock, lock, txn);
+// 
 MergeMutateSelectedEntryPtr StorageMergeTree::selectPartsToMerge(
     const StorageMetadataPtr & metadata_snapshot,
     bool aggressive,
@@ -968,8 +971,9 @@ MergeMutateSelectedEntryPtr StorageMergeTree::selectPartsToMerge(
 
     /// You must call destructor with unlocked `currently_processing_in_background_mutex`.
     CurrentlyMergingPartsTaggerPtr merging_tagger;
-    MergeList::EntryPtr merge_entry;
+    MergeList::EntryPtr merge_entry; // 这个merge_entry在selectPartsToMerge这个函数中似乎没用到
 
+    // 。。。
     auto can_merge = [this, &lock](const DataPartPtr & left, const DataPartPtr & right, const MergeTreeTransaction * tx, PreformattedMessage & disable_reason) -> bool
     {
         if (tx)
@@ -993,7 +997,7 @@ MergeMutateSelectedEntryPtr StorageMergeTree::selectPartsToMerge(
         }
 
         /// This predicate is checked for the first part of each range.
-        /// (left = nullptr, right = "first part of partition")
+        /// (left = nullptr, right = "first part of partition")  // -> 更准确的说法，right是first part of a new range
         if (!left)
         {
             if (currently_merging_mutating_parts.contains(right))
@@ -1011,6 +1015,7 @@ MergeMutateSelectedEntryPtr StorageMergeTree::selectPartsToMerge(
             return false;
         }
 
+        // 
         if (getCurrentMutationVersion(left, lock) != getCurrentMutationVersion(right, lock))
         {
             disable_reason = PreformattedMessage::create("Some parts have different mutation version");
@@ -1019,7 +1024,13 @@ MergeMutateSelectedEntryPtr StorageMergeTree::selectPartsToMerge(
 
         if (!partsContainSameProjections(left, right, disable_reason))
             return false;
-
+        
+        // 。。。
+        // 何时会出现这样的情况？？ 
+        // 如果merge了，会怎样？
+        /*
+        在StorageMergeTree.h中搜"all_3", 在MergeTreeDataMergerMutator.中搜"all_3"
+        */
         auto max_possible_level = getMaxLevelInBetween(left, right);
         if (max_possible_level > std::max(left->info.level, right->info.level))
         {
@@ -1046,7 +1057,7 @@ MergeMutateSelectedEntryPtr StorageMergeTree::selectPartsToMerge(
     {
         if (is_background_memory_usage_ok(out_disable_reason))
         {
-            UInt64 max_source_parts_size = merger_mutator.getMaxSourcePartsSizeForMerge();
+            UInt64 max_source_parts_size = merger_mutator.getMaxSourcePartsSizeForMerge(); //
             bool merge_with_ttl_allowed = getTotalMergesWithTTLInMergeList() < data_settings->max_number_of_merges_with_ttl_in_pool;
 
             /// TTL requirements is much more strict than for regular merge, so
@@ -1054,6 +1065,7 @@ MergeMutateSelectedEntryPtr StorageMergeTree::selectPartsToMerge(
             /// possible.
             if (max_source_parts_size > 0)
             {
+                // 。。。   
                 select_decision = merger_mutator.selectPartsToMerge(
                     future_part,
                     aggressive,
@@ -1135,6 +1147,8 @@ MergeMutateSelectedEntryPtr StorageMergeTree::selectPartsToMerge(
     merging_tagger = std::make_unique<CurrentlyMergingPartsTagger>(future_part, MergeTreeDataMergerMutator::estimateNeededDiskSpace(future_part->parts, true), *this, metadata_snapshot, false);
     return std::make_shared<MergeMutateSelectedEntry>(future_part, std::move(merging_tagger), std::make_shared<MutationCommands>());
 }
+
+// ....  待查这个啥时候被调用的 .。。。。。。。。
 
 bool StorageMergeTree::merge(
     bool aggressive,
@@ -1388,6 +1402,8 @@ UInt32 StorageMergeTree::getMaxLevelInBetween(const DataPartPtr & left, const Da
     return level;
 }
 
+// 来自StorageReplicatedMergeTree.h "Schedules job to execute in background pool (merge, mutate, drop range and so on)"
+// 这里schedule的merge是 非aggressive的
 bool StorageMergeTree::scheduleDataProcessingJob(BackgroundJobsAssignee & assignee)
 {
     if (shutdown_called)
@@ -1416,7 +1432,8 @@ bool StorageMergeTree::scheduleDataProcessingJob(BackgroundJobsAssignee & assign
             return false;
 
         PreformattedMessage out_reason;
-        merge_entry = selectPartsToMerge(metadata_snapshot, false, {}, false, out_reason, shared_lock, lock, txn);
+        // 
+        merge_entry = selectPartsToMerge(metadata_snapshot, false /* aggressive */, {} /* partition_id */, false /*final*/, out_reason, shared_lock, lock, txn);
 
         if (!merge_entry && !current_mutations_by_version.empty())
             mutate_entry = selectPartsToMutate(metadata_snapshot, out_reason, shared_lock, lock);
@@ -1556,6 +1573,8 @@ size_t StorageMergeTree::clearOldMutations(bool truncate)
     return mutations_to_delete.size();
 }
 
+// StorageMergeTree::merge是私有函数，且在./src/Storages中搜过了，在./src/Storages中只在StorageMergeTree::optimize中被调用。
+// 似乎只会在InterpreterOptimizeQuery.cpp中被调，以及 可能在StorageProxy中被调
 bool StorageMergeTree::optimize(
     const ASTPtr & /*query*/,
     const StorageMetadataPtr & /*metadata_snapshot*/,
@@ -1632,7 +1651,7 @@ bool StorageMergeTree::optimize(
             partition_id = getPartitionIDFromQuery(partition, local_context);
 
         if (!merge(
-            true,
+            true,  // aggressive
             partition_id,
             final,
             deduplicate,

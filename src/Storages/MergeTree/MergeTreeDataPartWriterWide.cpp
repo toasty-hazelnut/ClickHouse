@@ -254,6 +254,7 @@ void MergeTreeDataPartWriterWide::write(const Block & block, const IColumn::Perm
     /// Fill index granularity for this block
     /// if it's unknown (in case of insert data or horizontal merge,
     /// but not in case of vertical part of vertical merge)
+    // 。。。
     if (compute_granularity)
     {
         size_t index_granularity_for_block = computeIndexGranularity(block);
@@ -352,6 +353,7 @@ void MergeTreeDataPartWriterWide::flushMarkToFile(const StreamNameAndMark & stre
         writeBinaryLittleEndian(rows_in_mark, marks_out);
 }
 
+// .。。。
 StreamsWithMarks MergeTreeDataPartWriterWide::getCurrentMarksForColumn(
     const NameAndTypePair & name_and_type,
     const ColumnPtr & column_sample,

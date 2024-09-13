@@ -97,7 +97,7 @@ public:
         : ReadBufferFromFileDescriptorPRead(-1, buf_size, existing_memory, alignment, file_size_, throttler_)
         , file_name(file_name_)
     {
-        file = OpenedFileCache::instance().get(file_name, flags);
+        file = OpenedFileCache::instance().get(file_name, flags);  // 
         fd = file->getFD();
     }
 

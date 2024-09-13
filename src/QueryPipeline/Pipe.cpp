@@ -176,6 +176,8 @@ Pipe::Pipe(ProcessorPtr source)
     max_parallel_streams = 1;
 }
 
+// 从Processors创建Pipe
+// output_ports为这些processors的未连接的output ports
 Pipe::Pipe(std::shared_ptr<Processors> processors_) : processors(std::move(processors_))
 {
     /// Create hash table with processors.
@@ -294,6 +296,9 @@ Pipe Pipe::unitePipes(Pipes pipes)
     return Pipe::unitePipes(std::move(pipes), nullptr, false);
 }
 
+/*
+多个pipes合成一个pipe
+*/
 Pipe Pipe::unitePipes(Pipes pipes, Processors * collected_processors, bool allow_empty_header)
 {
     Pipe res;
@@ -445,14 +450,17 @@ void Pipe::addTransform(ProcessorPtr transform, InputPort * totals, InputPort * 
         static_cast<OutputPort *>(nullptr), static_cast<OutputPort *>(nullptr));
 }
 
-// 
+/* 把这个transform process emplace_back到 Pipe的processors中
+连接原output ports 和 新input ports
+设置output ports
+*/
 void Pipe::addTransform(
     ProcessorPtr transform,
     InputPort * totals_in, InputPort * extremes_in,
     OutputPort * totals_out, OutputPort * extremes_out)
 {
     if (output_ports.empty())
-        throw Exception(ErrorCodes::LOGICAL_ERROR, "Cannot add transform to empty Pipe");
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "Cannot add transform to empty Pipe"); //
 
     if (totals_in && !totals_port)
         throw Exception(ErrorCodes::LOGICAL_ERROR, "Cannot add transform consuming totals to Pipe because Pipe does not have totals");
@@ -469,6 +477,7 @@ void Pipe::addTransform(
     auto & inputs = transform->getInputs();
     auto & outputs = transform->getOutputs();
 
+    // 所添加的transform 的inputs数要和 当前pipe的ouputs数一样
     size_t expected_inputs = output_ports.size() + (totals_in ? 1 : 0) + (extremes_in ? 1 : 0);
     if (inputs.size() != expected_inputs)
         throw Exception(
@@ -540,16 +549,18 @@ void Pipe::addTransform(
     totals_port = totals_out ? totals_out : totals_port;
     extremes_port = extremes_out ? extremes_out : extremes_port;
 
+    // 把原pipe的各个output port 和  新加的transform的各个input port连接起来
     size_t next_output = 0;
     for (auto & input : inputs)
     {
         if (&input != totals_in && &input != extremes_in)
         {
-            connect(*output_ports[next_output], input);
+            connect(*output_ports[next_output], input);  // connect中做了什么。。
             ++next_output;
         }
     }
 
+    // 重新设置pipe的output_ports
     output_ports.clear();
     output_ports.reserve(outputs.size());
     for (auto & output : outputs)
@@ -572,6 +583,7 @@ void Pipe::addTransform(
     if (collected_processors)
         collected_processors->emplace_back(transform);
 
+    // 把这个transform 加到 pipe的processors中
     processors->emplace_back(std::move(transform));
 
     max_parallel_streams = std::max<size_t>(max_parallel_streams, output_ports.size());

@@ -18,6 +18,7 @@ private:
     bool auto_progress;
 
 protected:
+    // 有一个output port, 没有input port
     OutputPort & output;
     bool has_input = false;
     bool finished = false;

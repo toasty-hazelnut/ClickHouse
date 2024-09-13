@@ -433,6 +433,7 @@ MergeTreeData::MergeTreeData(
     };
 }
 
+// 
 VirtualColumnsDescription MergeTreeData::createVirtuals(const StorageInMemoryMetadata & metadata)
 {
     VirtualColumnsDescription desc;
@@ -1535,7 +1536,7 @@ MergeTreeData::LoadPartResult MergeTreeData::loadDataPart(
     {
         std::lock_guard lock(part_loading_mutex);
         LOG_TEST(log, "loadDataPart: inserting {} into data_parts_indexes", res.part->getNameWithState());
-        std::tie(it, inserted) = data_parts_indexes.insert(res.part);
+        std::tie(it, inserted) = data_parts_indexes.insert(res.part);  // 这里insert
     }
 
     /// Remove duplicate parts with the same checksum.
@@ -1839,7 +1840,8 @@ void MergeTreeData::loadDataParts(bool skip_sanity_checks, std::optional<std::un
     bool is_static_storage = isStaticStorage();
 
     if (num_parts > 0)
-    {
+    {   
+        // 
         auto loaded_parts = loadDataPartsFromDisk(active_parts);
 
         for (const auto & res : loaded_parts)
@@ -3626,6 +3628,7 @@ void MergeTreeData::checkMutationIsPossible(const MutationCommands & /*commands*
             throw Exception(ErrorCodes::SUPPORT_IS_DISABLED, "Mutations are not supported for immutable disk '{}'", disk->getName());
 }
 
+// 
 MergeTreeDataPartFormat MergeTreeData::choosePartFormat(size_t bytes_uncompressed, size_t rows_count) const
 {
     using PartType = MergeTreeDataPartType;
@@ -3648,6 +3651,7 @@ MergeTreeDataPartFormat MergeTreeData::choosePartFormat(size_t bytes_uncompresse
     return {part_type, PartStorageType::Full};
 }
 
+// 
 MergeTreeDataPartFormat MergeTreeData::choosePartFormatOnDisk(size_t bytes_uncompressed, size_t rows_count) const
 {
     return choosePartFormat(bytes_uncompressed, rows_count);
@@ -3949,6 +3953,7 @@ void MergeTreeData::preparePartForCommit(MutableDataPartPtr & part, Transaction 
     out_transaction.addPart(part);
 }
 
+// 全局搜'addTempPart'都没找到这个函数被调？
 bool MergeTreeData::addTempPart(
     MutableDataPartPtr & part,
     Transaction & out_transaction,
@@ -4521,7 +4526,7 @@ std::optional<Int64> MergeTreeData::getMinPartDataVersion() const
     return result;
 }
 
-
+// 
 void MergeTreeData::delayInsertOrThrowIfNeeded(Poco::Event * until, const ContextPtr & query_context, bool allow_throw) const
 {
     const auto settings = getSettings();
@@ -4565,6 +4570,7 @@ void MergeTreeData::delayInsertOrThrowIfNeeded(Poco::Event * until, const Contex
         = query_settings.parts_to_throw_insert ? query_settings.parts_to_throw_insert : settings->parts_to_throw_insert;
     size_t active_parts_over_threshold = 0;
 
+    // 
     {
         bool parts_are_large_enough_in_average
             = settings->max_avg_part_size_for_too_many_parts && average_part_size > settings->max_avg_part_size_for_too_many_parts;
@@ -6086,7 +6092,9 @@ std::unordered_set<String> MergeTreeData::getAllPartitionIds() const
     return res;
 }
 
-
+/// Returns sorted list of the parts with specified states
+/// out_states will contain snapshot of each part state
+// getDataPartsVectorForInternalUsage() 获得active parts, 最终还是调的这个
 MergeTreeData::DataPartsVector MergeTreeData::getDataPartsVectorForInternalUsage(
     const DataPartStates & affordable_states, const DataPartsLock & /*lock*/, DataPartStateVector * out_states) const
 {
@@ -6098,6 +6106,9 @@ MergeTreeData::DataPartsVector MergeTreeData::getDataPartsVectorForInternalUsage
         auto range = getDataPartsStateRange(state);
         std::swap(buf, res);
         res.clear();
+        // 猜测: range.begin()到range.end()有序，buf.begin()到buf.end()有序，
+        // 结果会在 inserts elements at the end of the res container.
+        // LessDataPart() is a functor that defines how to compare during std::merge
         std::merge(range.begin(), range.end(), buf.begin(), buf.end(), std::back_inserter(res), LessDataPart());
     }
 
@@ -6113,7 +6124,8 @@ MergeTreeData::DataPartsVector MergeTreeData::getDataPartsVectorForInternalUsage
 
 MergeTreeData::DataPartsVector
 MergeTreeData::getDataPartsVectorForInternalUsage(const DataPartStates & affordable_states, DataPartStateVector * out_states) const
-{
+{   
+    // 
     auto lock = lockParts();
     return getDataPartsVectorForInternalUsage(affordable_states, lock, out_states);
 }

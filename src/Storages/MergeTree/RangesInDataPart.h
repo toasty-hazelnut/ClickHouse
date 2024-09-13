@@ -39,6 +39,7 @@ struct RangesInDataPartsDescription: public std::deque<RangesInDataPartDescripti
     void merge(RangesInDataPartsDescription & other);
 };
 
+// 
 struct RangesInDataPart
 {
     DataPartPtr data_part;

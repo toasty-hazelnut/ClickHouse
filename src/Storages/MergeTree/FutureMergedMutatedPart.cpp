@@ -26,6 +26,8 @@ void FutureMergedMutatedPart::assign(MergeTreeData::DataPartsVector parts_)
         future_part_storage_type = std::min(future_part_storage_type, part->getDataPartStorage().getType());
     }
 
+    // 见MergeTreeDataPartFormat MergeTreeData::choosePartFormat {... min_bytes_for_wide_part, min_rows_for_wide_part ... }
+    // min_bytes_for_wide_part默认为10485760，min_rows_for_wide_part默认0
     auto chosen_format = parts_.front()->storage.choosePartFormatOnDisk(sum_bytes_uncompressed, sum_rows);
     future_part_type = std::min(future_part_type, chosen_format.part_type);
     future_part_storage_type = std::min(future_part_storage_type, chosen_format.storage_type);

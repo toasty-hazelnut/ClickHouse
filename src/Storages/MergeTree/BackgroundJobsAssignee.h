@@ -45,7 +45,13 @@ private:
     size_t no_work_done_count = 0;
 
     /// Scheduling task which assign jobs in background pool
+    
+    // 是说task which assign jobs ?  是指BackgroundSchedulingPoolTask? 
+    
+    // TaskHolder 实际上是 BackgroundSchedulePoolTaskHolder // 见BackgroundSchedulePool.h "using TaskHolder = BackgroundSchedulePoolTaskHolder;"
+    // 一个holder holds one task 
     BackgroundSchedulePool::TaskHolder holder;
+
     /// Mutex for thread safety
     std::mutex holder_mutex;
 
@@ -55,6 +61,8 @@ public:
     /// e.g. merges, mutations and fetches. The same will be for Plain MergeTree except there is no
     /// replication queue, so we will just scan parts and decide what to do.
     /// Moving operations are the same for all types of MergeTree and also have their own timetable.
+
+    // 'schedule operations according to the LogEntry type' ... 
     enum class Type : uint8_t
     {
         DataProcessing,
@@ -67,6 +75,7 @@ public:
     void postpone();
     void finish();
 
+    // 何时会调？
     bool scheduleMergeMutateTask(ExecutableTaskPtr merge_task);
     bool scheduleFetchTask(ExecutableTaskPtr fetch_task);
     bool scheduleMoveTask(ExecutableTaskPtr move_task);
@@ -84,6 +93,8 @@ private:
     static String toString(Type type);
 
     /// Function that executes in background scheduling pool
+    // 这个function在 getSchedulePool().createTask时会传进去，最后成为holder所hold的task中的function。
+    // 
     void threadFunc();
 };
 

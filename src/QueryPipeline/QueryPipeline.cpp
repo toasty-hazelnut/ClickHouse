@@ -140,6 +140,8 @@ static void checkCompleted(Processors & processors)
     }
 }
 
+
+// 。。。可能和limit相关
 static void initRowsBeforeLimit(IOutputFormat * output_format)
 {
     RowsBeforeStepCounterPtr rows_before_limit_at_least;
@@ -359,11 +361,12 @@ QueryPipeline::QueryPipeline(
     checkPulling(*processors, output, totals, extremes);
 }
 
+// 
 QueryPipeline::QueryPipeline(Pipe pipe)
 {
     if (pipe.numOutputPorts() > 0)
     {
-        pipe.resize(1);
+        pipe.resize(1);  //
         output = pipe.getOutputPort(0);
         totals = pipe.getTotalsPort();
         extremes = pipe.getExtremesPort();
@@ -506,9 +509,10 @@ static void addMaterializing(OutputPort *& output, Processors & processors)
     processors.emplace_back(std::move(materializing));
 }
 
+// 
 void QueryPipeline::complete(std::shared_ptr<IOutputFormat> format)
 {
-    if (!pulling())
+    if (!pulling())  // 
         throw Exception(ErrorCodes::LOGICAL_ERROR, "Pipeline must be pulling to be completed with output format");
 
     if (format->expectMaterializedColumns())
@@ -555,6 +559,7 @@ void QueryPipeline::complete(std::shared_ptr<IOutputFormat> format)
     }
     output_format = format.get();
 
+    // 
     processors->emplace_back(std::move(format));
 }
 

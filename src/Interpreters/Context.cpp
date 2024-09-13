@@ -5373,14 +5373,15 @@ void Context::initializeBackgroundExecutorsIfNeeded()
     size_t background_fetches_pool_size = server_settings.background_fetches_pool_size;
     size_t background_common_pool_size = server_settings.background_common_pool_size;
 
-    /// With this executor we can execute more tasks than threads we have
+    /// With this executor we can execute more tasks than threads we have  ******
+    //   。。。
     shared->merge_mutate_executor = std::make_shared<MergeMutateBackgroundExecutor>
     (
         "MergeMutate",
-        /*max_threads_count*/background_pool_size,
-        /*max_tasks_count*/background_pool_max_tasks_count,
-        CurrentMetrics::BackgroundMergesAndMutationsPoolTask,
-        CurrentMetrics::BackgroundMergesAndMutationsPoolSize,
+        /*max_threads_count*/background_pool_size,  // 由用户settings决定
+        /*max_tasks_count*/background_pool_max_tasks_count, // 由用户settings决定 
+        CurrentMetrics::BackgroundMergesAndMutationsPoolTask,   //  "Number of active merges and mutations in an associated background pool"
+        CurrentMetrics::BackgroundMergesAndMutationsPoolSize,   // "Limit on number of active merges and mutations in an associated background pool"
         background_merges_mutations_scheduling_policy
     );
     LOG_INFO(shared->log, "Initialized background executor for merges and mutations with num_threads={}, num_tasks={}, scheduling_policy={}",
@@ -5544,7 +5545,9 @@ ReadSettings Context::getReadSettings() const
             "Invalid value '{}' for max_read_buffer_size", settings->max_read_buffer_size);
     }
 
-    res.local_fs_buffer_size
+    // max_read_buffer_size_local_fs:
+    // 128*1024, "The maximum size of the buffer to read from local filesystem. If set to 0 then max_read_buffer_size will be used." 来自Settings.h
+    res.128*1024, "The maximum size of the buffer to read from local filesystem. If set to 0 then max_read_buffer_size will be used."
         = settings->max_read_buffer_size_local_fs ? settings->max_read_buffer_size_local_fs : settings->max_read_buffer_size;
     res.remote_fs_buffer_size
         = settings->max_read_buffer_size_remote_fs ? settings->max_read_buffer_size_remote_fs : settings->max_read_buffer_size;

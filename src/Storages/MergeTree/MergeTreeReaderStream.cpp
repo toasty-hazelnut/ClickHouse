@@ -97,6 +97,7 @@ void MergeTreeReaderStream::init()
     }
     else
     {
+        //
         auto buffer = std::make_unique<CompressedReadBufferFromFile>(
             data_part_storage->readFile(
                 path_prefix + data_file_extension,

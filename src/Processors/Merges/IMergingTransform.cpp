@@ -117,6 +117,7 @@ IProcessor::Status IMergingTransformBase::prepareInitializeInputs()
         /// setNotNeeded after reading first chunk, because in optimismtic case
         /// (e.g. with optimized 'ORDER BY primary_key LIMIT n' and small 'n')
         /// we won't have to read any chunks anymore;
+        // 。。。之后可看
         auto chunk = input.pull(limit_hint != 0);
         if ((limit_hint && chunk.getNumRows() < limit_hint) || always_read_till_end)
             input.setNeeded();
@@ -176,12 +177,21 @@ IProcessor::Status IMergingTransformBase::prepare()
     }
 
     /// Do not disable inputs, so they can be executed in parallel.
+    // 。。。。 
     bool is_port_full = !output.canPush();
 
     /// Push if has data.
-    // state.output_chunk只在这里被用到
+    // state.output_chunk只在这里被用到 *
+    // 有输出后，会output.push()      下一个processor会检查这个output? 下一个processor是谁？ 。。。
     if ((state.output_chunk || !state.output_chunk.getChunkInfos().empty()) && !is_port_full)
-        output.push(std::move(state.output_chunk));
+        output.push(std::move(state.output_chunk));         // 如果output.push()后再调output.canPush()，  是否会返回true ？
+
+        // output.push中是否会令 is_port_full变成full？ 似乎不会？is_port_full是local变量，output.push()中access不到。
+        // 那么下面返回Status::Ready？？  然后是否会继续调work() || 还是会调下游读这个port的processor的work？？？? (可能是可以的，因为不同processors的work可以in parallel执行。 但普通merge是单线程的？)
+        // 如果调imergingtransform work，work又merge出一个chunk，然后又调prepare(), 可能发现port full？
+       
+
+        // port的容量是多少？ （某知乎文章说是1 chunk）
 
     // 第一次的时候调prepareInitializeInputs, 之后is_initialized似乎一直是true
     if (!is_initialized)

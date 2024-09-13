@@ -28,13 +28,14 @@ class BackgroundSchedulePoolTaskHolder;
 /** Executes functions scheduled at a specific point in time.
   * Basically all tasks are added in a queue and precessed by worker threads.
   *
-  * The most important difference between this and BackgroundProcessingPool
+  * The most important difference between this and BackgroundProcessingPool (没找到BackgroundProcessingPool这个类？)
   *  is that we have the guarantee that the same function is not executed from many workers in the same time.
   *
   * The usage scenario: instead starting a separate thread for each task,
   *  register a task in BackgroundSchedulePool and when you need to run the task,
   *  call schedule or scheduleAfter(duration) method.
   */
+// 
 class BackgroundSchedulePool
 {
 public:
@@ -77,7 +78,7 @@ private:
     /// Tasks.
     std::condition_variable tasks_cond_var;
     std::mutex tasks_mutex;
-    std::deque<TaskInfoPtr> tasks;
+    std::deque<TaskInfoPtr> tasks;    // tasks in deque
     Threads threads;
 
     /// Delayed tasks.
@@ -91,6 +92,8 @@ private:
 
     CurrentMetrics::Metric tasks_metric;
     CurrentMetrics::Increment size_metric;
+
+    // ...
     std::string thread_name;
 };
 
@@ -116,6 +119,7 @@ public:
     void activate();
 
     /// Atomically activate task and schedule it for execution.
+    // atomically什么意思？
     bool activateAndSchedule();
 
     /// get Coordination::WatchCallback needed for notifications from ZooKeeper watches.
@@ -135,6 +139,8 @@ private:
 
     BackgroundSchedulePool & pool;
     std::string log_name;
+
+    // using TaskFunc = std::function<void()>;
     BackgroundSchedulePool::TaskFunc function;
 
     std::mutex exec_mutex;
@@ -154,7 +160,7 @@ private:
 
 using BackgroundSchedulePoolTaskInfoPtr = std::shared_ptr<BackgroundSchedulePoolTaskInfo>;
 
-
+// 重载了 operator->
 class BackgroundSchedulePoolTaskHolder
 {
 public:

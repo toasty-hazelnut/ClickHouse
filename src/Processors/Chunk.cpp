@@ -72,7 +72,7 @@ MutableColumns Chunk::mutateColumns()
     size_t num_columns = columns.size();
     MutableColumns mutable_columns(num_columns);
     for (size_t i = 0; i < num_columns; ++i)
-        mutable_columns[i] = IColumn::mutate(std::move(columns[i]));
+        mutable_columns[i] = IColumn::mutate(std::move(columns[i]));  // move相关。。。
 
     columns.clear();
     num_rows = 0;

@@ -40,7 +40,8 @@ namespace DB
   * It is used in priority queue.
   */
 struct SortCursorImpl
-{
+{   
+    // IColumn.h中  using ColumnRawPtrs = std::vector<const IColumn *>;
     ColumnRawPtrs sort_columns;
     ColumnRawPtrs all_columns;
     SortDescription desc;
@@ -53,6 +54,7 @@ struct SortCursorImpl
       * Cursor number (always?) equals to number of merging part.
       * Therefore this field can be used to determine part number of current row (see ColumnGathererStream).
       */
+      // 结合ColumnGathererStream 看一下。。。
     size_t order = 0;
 
     using NeedCollationFlags = std::vector<UInt8>;
@@ -187,7 +189,7 @@ struct SortCursorHelper
     }
 
     /// Inverted so that the priority queue elements are removed in ascending order.
-    //  make_heap使用的是这个operator< ?    
+    //  make_heap使用的是这个operator< ?   。。。 
     // ...有空可看operator< 返回的含义。   目前推测堆顶是小的。因为某处代码逻辑，以及'removed in ascending order'
     bool ALWAYS_INLINE operator< (const SortCursorHelper & rhs) const
     {
@@ -237,6 +239,7 @@ struct SortCursor : SortCursorHelper<SortCursor>
             const auto & desc = impl->desc[i];
             int direction = desc.direction;
             int nulls_direction = desc.nulls_direction;
+            // sort_columns类型为 ColumnRawPtrs为vector<const IColumn *>.   见IColumn.h中compareAt方法：若lhs > rhs, 则返回正数
             int res = direction * impl->sort_columns[i]->compareAt(lhs_pos, rhs_pos, *(rhs.impl->sort_columns[i]), nulls_direction);
 
             if (res > 0)
@@ -251,6 +254,8 @@ struct SortCursor : SortCursorHelper<SortCursor>
 
 
 /// For the case with a single column and when there is no order between different cursors.
+// 只有一个sorting column
+// "when there is no order between different cursors" 但 下面有 return impl->order > rhs.impl->order;?
 struct SimpleSortCursor : SortCursorHelper<SimpleSortCursor>
 {
     using SortCursorHelper<SimpleSortCursor>::SortCursorHelper;
@@ -344,11 +349,15 @@ struct SortCursorWithCollation : SortCursorHelper<SortCursorWithCollation>
     }
 };
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 enum class SortingQueueStrategy : uint8_t
 {
     Default,
     Batch
 };
+// Batch strategy 和cpp russia 2023 slides中说的batch是一个吗？ 似乎是一个
+// 那普通merge有用到 Batch strategy吗？似乎没有
 
 // 使用SortingQueueImpl时，会传入什么类型的Cursor？
 /// Allows to fetch data from multiple sort cursors in sorted order (merging sorted data streams).
@@ -413,6 +422,7 @@ public:
         }
     }
 
+    // 谁会调 next(batch_size_value) 。。？
     void ALWAYS_INLINE next(size_t batch_size_value) requires (strategy == SortingQueueStrategy::Batch)
     {
         assert(isValid());
@@ -422,12 +432,15 @@ public:
         batch_size -= batch_size_value;
         if (batch_size > 0)
         {
-            queue.front()->next(batch_size_value);
+            queue.front()->next(batch_size_value);  // cursor往后移这么多
             return;
         }
 
+        // 原batch_size == batch_size_value
+        
         if (!queue.front()->isLast(batch_size_value))
-        {
+        {  
+            // 但这个block还没耗尽，所以要updateTop. 因为之前已经求过batch size了，没到block结尾，说明batch size后的 一定不符合heap order, 所以就无需check in order了。
             queue.front()->next(batch_size_value);
             updateTop(false /*check_in_order*/);
         }
@@ -437,16 +450,18 @@ public:
         }
     }
 
+    // 在普通merge场景中没有被用到
     void replaceTop(Cursor new_top)
     {
         queue.front() = new_top;
         updateTop(true /*check_in_order*/);
     }
 
+    // 如果这个block读完了，但part还没读完 ，是用一个新的Cursor吗？ 
     void removeTop()
     {
         std::pop_heap(queue.begin(), queue.end());
-        queue.pop_back();
+        queue.pop_back();   // 真正从queue中删掉
         next_child_idx = 0;
 
         if constexpr (strategy == SortingQueueStrategy::Batch)
@@ -473,7 +488,6 @@ private:
     Container queue;
 
     /// Cache comparison between first and second child if the order in queue has not been changed.
-    // cache在哪？
     size_t next_child_idx = 0;
     size_t batch_size = 0;
 
@@ -497,18 +511,21 @@ private:
     /// Why cannot simply use std::priority_queue?
     /// - because it doesn't support updating the top element and requires pop and push instead.
     /// Also look at "Boost.Heap" library.
+    // 
     void ALWAYS_INLINE updateTop(bool check_in_order)
     {
         size_t size = queue.size();
         if (size < 2)
             return;
-
+        
+        // 此时begin已经是 堆顶cursor已经向后移动了
         auto begin = queue.begin();
 
         size_t child_idx = nextChildIndex();
         auto child_it = begin + child_idx;
 
         /// Check if we are in order.
+        // 比 更小的那个child小，则返回 无需调整
         if (check_in_order && (*child_it).greater(*begin))
         {
             if constexpr (strategy == SortingQueueStrategy::Batch)
@@ -518,12 +535,13 @@ private:
 
         next_child_idx = 0;
 
+        // 有时间看下这段do{}while的具体代码。 就是正常的sift down操作
         auto curr_it = begin;
         auto top(std::move(*begin));
         do
         {
             /// We are not in heap-order, swap the parent with it's largest child.
-            // swap with largest child, 所以堆顶的是大的？
+            // swap with largest child, 这里的largets可能是指堆中的术语largest. 实际上是和更小的交换
             *curr_it = std::move(*child_it);
             curr_it = child_it;
 
@@ -537,7 +555,7 @@ private:
 
             if ((child_idx + 1) < size && (*child_it).greater(*(child_it + 1)))
             {
-                /// Right child exists and is greater than left child.
+                /// Right child exists and is greater than left child.  （这里的greater可能是指堆中的术语greater.实际上是更小的, 让child_it指向更小的子）
                 ++child_it;
                 ++child_idx;
             }
@@ -551,6 +569,7 @@ private:
     }
 
     /// Update batch size of elements that client can extract from current cursor
+    // 。。。 猜测batch size 的含义：当前堆顶block中，比孩子小的，从而可以都一起返回的
     void updateBatchSize()
     {
         assert(!queue.empty());
@@ -565,14 +584,16 @@ private:
             return;
         }
 
-        batch_size = 1;
+        batch_size = 1;     // 重置batch_size： 1肯定是可以的，即当前begin cursor指向的一定是小于child cursor的
         size_t child_idx = nextChildIndex();
         auto & next_child_cursor = *(queue.begin() + child_idx);
 
+        // 为何做2遍呢？
         if (min_cursor_pos + batch_size < min_cursor_size && next_child_cursor.greaterWithOffset(begin_cursor, 0, batch_size))
             ++batch_size;
         else
             return;
+        
 
         if (unlikely(begin_cursor.totallyLessOrEquals(next_child_cursor)))
         {
@@ -580,6 +601,7 @@ private:
             return;
         }
 
+        //
         while (min_cursor_pos + batch_size < min_cursor_size && next_child_cursor.greaterWithOffset(begin_cursor, 0, batch_size))
             ++batch_size;
     }

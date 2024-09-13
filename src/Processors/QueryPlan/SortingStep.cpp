@@ -367,6 +367,9 @@ void SortingStep::fullSort(
     }
 }
 
+// mergingSorted()在本页中都是在这个transformPipeline中被调用的
+// fullSort()在本页中也都是在这个transformPipeline中被调用的
+// mergingSorted(), fullSort()中构造了 MergingSortedTransform
 void SortingStep::transformPipeline(QueryPipelineBuilder & pipeline, const BuildQueryPipelineSettings &)
 {
     /// We consider that a caller has more information what type of sorting to apply.

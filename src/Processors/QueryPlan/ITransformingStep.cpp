@@ -29,7 +29,7 @@ DataStream ITransformingStep::createOutputStream(
     return output_stream;
 }
 
-
+// 。。。
 QueryPipelineBuilderPtr ITransformingStep::updatePipeline(QueryPipelineBuilders pipelines, const BuildQueryPipelineSettings & settings)
 {
     if (collect_processors)

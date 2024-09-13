@@ -8,6 +8,7 @@ namespace DB
 /// Reader for compact parts, that uses one buffer for
 /// all column and doesn't support parallel prefetch of columns.
 /// It's suitable for compact parts with small size of stripe.
+// one buffer for all column
 class MergeTreeReaderCompactSingleBuffer : public MergeTreeReaderCompact
 {
 public:

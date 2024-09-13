@@ -63,6 +63,7 @@ void MergingSortedTransform::onFinish()
     if (seconds == 0.0)
         LOG_DEBUG(log, "Merge sorted {} blocks, {} rows in 0 sec.", merged_data.totalChunks(), merged_data.totalMergedRows());
     else
+    //  totalChunks(), totalMergedRows()
         LOG_DEBUG(log, "Merge sorted {} blocks, {} rows in {} sec., {} rows/sec., {}/sec",
             merged_data.totalChunks(), merged_data.totalMergedRows(), seconds,
             merged_data.totalMergedRows() / seconds,

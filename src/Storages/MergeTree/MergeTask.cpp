@@ -353,7 +353,7 @@ bool MergeTask::ExecuteAndFinalizeHorizontalPart::prepare()
         }
         case MergeAlgorithm::Vertical:
         {
-            // 
+            // Vertical中，会设置 rows_sources_uncompressed_write_buf 和 rows_sources_write_buf
             ctx->rows_sources_uncompressed_write_buf = ctx->tmp_disk->createRawStream();
             ctx->rows_sources_write_buf = std::make_unique<CompressedWriteBuffer>(*ctx->rows_sources_uncompressed_write_buf);
 
@@ -415,6 +415,7 @@ bool MergeTask::ExecuteAndFinalizeHorizontalPart::prepare()
         }
     }
 
+    // 。。。 
     global_ctx->to = std::make_shared<MergedBlockOutputStream>(
         global_ctx->new_data_part,
         global_ctx->metadata_snapshot,
@@ -424,7 +425,7 @@ bool MergeTask::ExecuteAndFinalizeHorizontalPart::prepare()
         ctx->compression_codec,
         global_ctx->txn ? global_ctx->txn->tid : Tx::PrehistoricTID,
         /*reset_columns=*/ true,
-        ctx->blocks_are_granules_size,
+        ctx->blocks_are_granules_size,  // true for vertical merges
         global_ctx->context->getWriteSettings());
 
     global_ctx->rows_written = 0;
@@ -522,12 +523,23 @@ bool MergeTask::ExecuteAndFinalizeHorizontalPart::executeImpl()
     {
         global_ctx->rows_written += block.rows();
 
+        // pull(block)返回后，就会write block 
+
+        // totally less than or equals时，如果merged_data中有一些行，会先返回 之后再整个。
+        // merging_executor->pull(block)会返回，block中可能只包含几行数据。 （过了一遍merge这边的流程，目前的结论是会出现这样的情况 80%确定？）
+        
+        // 这样，是否最后写到文件中是 一个compressed block中只有几列，就要看MergedBlockOutputStream中怎么写了。。。
+        // 对于compact part，是否会导致 只有几行的列们、然后只有几行的列们、....  
+        // 对于wide part, 是否会导致一个compressed block中，包含的行很少？
+
+        // 是不是一个compressed block中，各列依次排列？
+        // compressed block 和 代码中一些地方用到的block 是一个东西吗？
         const_cast<MergedBlockOutputStream &>(*global_ctx->to).write(block);
 
         UInt64 result_rows = 0;
         UInt64 result_bytes = 0;
         global_ctx->merged_pipeline.tryGetResultRowsAndBytes(result_rows, result_bytes);
-        global_ctx->merge_list_element_ptr->rows_written = result_rows;
+        global_ctx->merge_list_element_ptr->rows_written = result_rows;     // 这个是总的。说明从merged_pipeline tryGet到的就是总的，所以=，而不是+=
         global_ctx->merge_list_element_ptr->bytes_written_uncompressed = result_bytes;
 
         /// Reservation updates is not performed yet, during the merge it may lead to higher free space requirements
@@ -584,6 +596,7 @@ bool MergeTask::VerticalMergeStage::prepareVerticalMergeForAllColumns() const
     /// In special case, when there is only one source part, and no rows were skipped, we may have
     /// skipped writing rows_sources file. Otherwise rows_sources_count must be equal to the total
     /// number of input rows.
+    // rows_sources_count要等于 number of input rows
     if ((rows_sources_count > 0 || global_ctx->future_part->parts.size() > 1) && sum_input_rows_exact != rows_sources_count + input_rows_filtered)
         throw Exception(
                         ErrorCodes::LOGICAL_ERROR,
@@ -594,11 +607,13 @@ bool MergeTask::VerticalMergeStage::prepareVerticalMergeForAllColumns() const
     /// TemporaryDataOnDisk::createRawStream returns WriteBufferFromFile implementing IReadableWriteBuffer
     /// and we expect to get ReadBufferFromFile here.
     /// So, it's relatively safe to use dynamic_cast here and downcast to ReadBufferFromFile.
+    // ？？？
     auto * wbuf_readable = dynamic_cast<IReadableWriteBuffer *>(ctx->rows_sources_uncompressed_write_buf.get());
     std::unique_ptr<ReadBuffer> reread_buf = wbuf_readable ? wbuf_readable->tryGetReadBuffer() : nullptr;
     if (!reread_buf)
-        throw Exception(ErrorCodes::LOGICAL_ERROR, "Cannot read temporary file {}", ctx->rows_sources_uncompressed_write_buf->getFileName());
-
+        throw Exception(ErrorCodes::LOGICAL_ERROR, "Cannot read temporary file {}", ctx->rows_sources_uncompressed_write_buf->getFileName()); // 这个filename
+    
+    // 这段有时间可看 ...
     auto * reread_buffer_raw = dynamic_cast<ReadBufferFromFileBase *>(reread_buf.get());
     if (!reread_buffer_raw)
     {
@@ -613,6 +628,7 @@ bool MergeTask::VerticalMergeStage::prepareVerticalMergeForAllColumns() const
     std::unique_ptr<ReadBufferFromFileBase> reread_buffer_from_file(reread_buffer_raw);
 
     /// CompressedReadBufferFromFile expects std::unique_ptr<ReadBufferFromFile> as argument.
+    // 这里设置row_sources_read_buf
     ctx->rows_sources_read_buf = std::make_unique<CompressedReadBufferFromFile>(std::move(reread_buffer_from_file));
     ctx->it_name_and_type = global_ctx->gathering_columns.cbegin();
 
@@ -686,6 +702,7 @@ void MergeTask::VerticalMergeStage::prepareVerticalMergeForOneColumn() const
     bool is_result_sparse = global_ctx->new_data_part->getSerialization(column_name)->getKind() == ISerialization::Kind::SPARSE;
 
     const auto data_settings = global_ctx->data->getSettings();
+    //  在这里传入rows_sources_read_buf
     auto transform = std::make_unique<ColumnGathererTransform>(
         pipe.getHeader(),
         pipe.numOutputPorts(),
@@ -741,6 +758,7 @@ void MergeTask::VerticalMergeStage::prepareVerticalMergeForOneColumn() const
 bool MergeTask::VerticalMergeStage::executeVerticalMergeForOneColumn() const
 {
     Block block;
+    // executor是。。。
     if (!global_ctx->merges_blocker->isCancelled() && !global_ctx->merge_list_element_ptr->is_cancelled.load(std::memory_order_relaxed)
         && ctx->executor->pull(block))
     {
@@ -1066,7 +1084,7 @@ void MergeTask::ExecuteAndFinalizeHorizontalPart::createMergedStream()
             MergeTreeSequentialSourceType::Merge,
             *global_ctx->data,
             global_ctx->storage_snapshot,
-            part,
+            part,       // 类型为 MergeTreeData::DataPartPtr
             global_ctx->merging_columns.getNames(),         // columns_to_read field in MergeTreeSequentialSource
             /*mark_ranges=*/ {},
             global_ctx->input_rows_filtered,
@@ -1121,6 +1139,7 @@ void MergeTask::ExecuteAndFinalizeHorizontalPart::createMergedStream()
     /// The order of the streams is important: when the key is matched, the elements go in the order of the source stream number.
     /// In the merged part, the lines with the same key must be in the ascending order of the identifier of original part,
     ///  that is going in insertion order.
+    // 
     ProcessorPtr merged_transform;
 
     /// If merge is vertical we cannot calculate it
@@ -1144,7 +1163,7 @@ void MergeTask::ExecuteAndFinalizeHorizontalPart::createMergedStream()
                 /* always_read_till_end_= */false,
                 ctx->rows_sources_write_buf.get(),
                 true,
-                ctx->blocks_are_granules_size);
+                ctx->blocks_are_granules_size /* use_average_block_sizes, true for vertical merges*/);
             break;
 
         case MergeTreeData::MergingParams::Collapsing:
@@ -1270,6 +1289,7 @@ MergeAlgorithm MergeTask::ExecuteAndFinalizeHorizontalPart::chooseMergeAlgorithm
         return MergeAlgorithm::Horizontal;
     if (ctx->need_remove_expired_values)
         return MergeAlgorithm::Horizontal;
+    // 这里是说part_format.part_type是 merge output的part_type   --- 这里规定了，如果output part为Compact, 则不能使用Vertical。也就是说，Vertical的输出一定是Wide
     if (global_ctx->future_part->part_format.part_type != MergeTreeDataPartType::Wide)
         return MergeAlgorithm::Horizontal;
     if (global_ctx->future_part->part_format.storage_type != MergeTreeDataPartStorageType::Full)
@@ -1278,7 +1298,7 @@ MergeAlgorithm MergeTask::ExecuteAndFinalizeHorizontalPart::chooseMergeAlgorithm
         return MergeAlgorithm::Horizontal;
     
     // allow_vertical_merges_from_compact_to_wide_parts, 见MergeTreeSettings.h
-    // 是否允许vertical merges from compact to wide parts
+    // 是否允许vertical merges from compact to wide parts: 输入parts中含compact, 就不能使用vertical
     if (!data_settings->allow_vertical_merges_from_compact_to_wide_parts)
     {
         for (const auto & part : global_ctx->future_part->parts)

@@ -119,9 +119,10 @@ public:
       *
       * can_merge - a function that determines if it is possible to merge a pair of adjacent parts.
       *  This function must coordinate merge with inserts and other merges, ensuring that
-      *  - Parts between which another part can still appear can not be merged. Refer to METR-7001.
+      *  - Parts between which another part can still appear can not be merged. Refer to METR-7001. 。。。。。。。。。。。。。。。。。。 以及怎么找METR-7001？以及或许可以看更早时候的代码
       *  - A part that already merges with something in one place, you can not start to merge into something else in another place.
       */
+      // adjacent parts间为何还会出现新part啊？。。。
     SelectPartsDecision selectPartsToMerge(
         FutureMergedMutatedPartPtr future_part,
         bool aggressive,
@@ -137,6 +138,7 @@ public:
       * but if setting optimize_skip_merged_partitions is true than single part with level > 0
       * and without expired TTL won't be merged with itself.
       */
+      // 。。。
     SelectPartsDecision selectAllPartsToMergeWithinPartition(
         FutureMergedMutatedPartPtr future_part,
         const AllowedMergingPredicate & can_merge,
@@ -154,6 +156,7 @@ public:
       * time_of_merge - the time when the merge was assigned.
       * Important when using ReplicatedGraphiteMergeTree to provide the same merge on replicas.
       */
+      //
     MergeTaskPtr mergePartsToTemporaryPart(
         FutureMergedMutatedPartPtr future_part,
         const StorageMetadataPtr & metadata_snapshot,

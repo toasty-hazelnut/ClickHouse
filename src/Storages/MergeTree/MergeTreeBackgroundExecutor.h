@@ -36,6 +36,7 @@ using TaskRuntimeDataPtr = std::shared_ptr<TaskRuntimeData>;
  * Has RAII class to determine how many tasks are waiting for the execution and executing at the moment.
  * Also has some flags and primitives to wait for current task to be executed.
  */
+// 
 struct TaskRuntimeData
 {
     TaskRuntimeData(ExecutableTaskPtr && task_, CurrentMetrics::Metric metric_)

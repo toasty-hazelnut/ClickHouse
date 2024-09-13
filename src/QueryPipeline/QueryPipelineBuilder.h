@@ -65,6 +65,7 @@ public:
     void addSimpleTransform(const Pipe::ProcessorGetter & getter);
     void addSimpleTransform(const Pipe::ProcessorGetterWithStreamKind & getter);
     /// Add transform with getNumStreams() input ports.
+    // 
     void addTransform(ProcessorPtr transform);
     void addTransform(ProcessorPtr transform, InputPort * totals, InputPort * extremes);
 
@@ -199,7 +200,8 @@ public:
 
     /// Convert query pipeline to pipe.
     static Pipe getPipe(QueryPipelineBuilder pipeline, QueryPlanResourceHolder & resources);
-    static QueryPipeline getPipeline(QueryPipelineBuilder builder);
+    // 从builder （含成员pipe） -》 得到QueryPipeline
+    static QueryPipeline getPipeline(QueryPipelineBuilder builder);     
 
 private:
 

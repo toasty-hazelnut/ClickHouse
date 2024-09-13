@@ -59,7 +59,7 @@ bool PullingPipelineExecutor::pull(Chunk & chunk)
     
     // from PipelineExecutor::executeStep
     /// Execute single step. Step will be stopped when yield_flag is true.
-    /// Execution is happened in a single thread.
+    /// Execution is happened in a single thread. (PullingPipelineExecutor.h中对PullingPipelineExecutor的介绍 ： Pulling executor for QueryPipeline. Always execute pipeline in single thread.)
     /// Return true if execution should be continued.
 
     // bool PipelineExecutor::executeStep(std::atomic_bool * yield_flag)

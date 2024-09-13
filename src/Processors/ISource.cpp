@@ -19,6 +19,22 @@ ISource::ISource(Block header, bool enable_auto_progress)
 {
 }
 
+/*
+work() { has_input = true; current_chunk = ; } -> prepare() { output.pushData(); has_input = false; return Status::PortFull; }
+下游processor调prepare(){  }
+prepare(){ output.canPush(); return Ready; }
+
+work() {同上 ... }
+
+
+PortFull: 来自IProcessor.h:
+/// Processor cannot proceed because output port is full or not isNeeded().
+/// You need to transfer data from output port (感觉指的是shared state中的data？) to the input port (感觉指的是下游processor自己成员中的data？) of another processor and then call 'prepare' again.
+
+
+注，符合IProcessor.h中说的，work中不会操作port，prepare中会操作port
+
+*/
 ISource::Status ISource::prepare()
 {
     if (finished)
@@ -37,6 +53,7 @@ ISource::Status ISource::prepare()
     if (!has_input)
         return Status::Ready;
 
+    // 
     output.pushData(std::move(current_chunk));
     has_input = false;
 
@@ -54,6 +71,7 @@ ISource::Status ISource::prepare()
     }
 
     /// Now, we pushed to output, and it must be full.
+    // 上面调用了output.pushData()
     return Status::PortFull;
 }
 
@@ -110,7 +128,7 @@ void ISource::work()
             current_chunk.chunk = std::move(*chunk);
             if (current_chunk.chunk)
             {
-                has_input = true;
+                has_input = true;  //
                 if (auto_progress && !read_progress_was_set)
                     progress(current_chunk.chunk.getNumRows(), current_chunk.chunk.bytes());
             }

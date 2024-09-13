@@ -212,6 +212,7 @@ public:
 
     /// Compute part block id for zero level part. Otherwise throws an exception.
     /// If token is not empty, block id is calculated based on it instead of block data
+    //
     UInt128 getPartBlockIDHash() const;
     String getZeroLevelPartBlockID(std::string_view token) const;
 
@@ -291,7 +292,7 @@ public:
 
     mutable TTLInfos ttl_infos;
 
-    /// Current state of the part. If the part is in working set already, it should be accessed via data_parts mutex
+    /// Current state of the part. If the part is in working set already, it should be accessed via data_parts mutex // 
     void setState(MergeTreeDataPartState new_state) const;
     ALWAYS_INLINE MergeTreeDataPartState getState() const { return state; }
 
@@ -655,7 +656,7 @@ private:
     mutable MergeTreeDataPartState state{MergeTreeDataPartState::Temporary};
 
     /// In compact parts order of columns is necessary
-    NameToNumber column_name_to_position;
+    NameToNumber column_name_to_position;  // 
 
     /// Map from name of column to its serialization info.
     SerializationInfoByName serialization_infos;

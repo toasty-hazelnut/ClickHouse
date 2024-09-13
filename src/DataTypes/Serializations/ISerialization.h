@@ -47,6 +47,7 @@ struct NameAndTypePair;
  *  Currently there is only one special serialization: Sparse.
  *  Each serialization has its own implementation of IColumn as its in-memory representation.
  */
+ // 
 class ISerialization : private boost::noncopyable, public std::enable_shared_from_this<ISerialization>
 {
 public:

@@ -26,6 +26,7 @@ MergeTreeDataPartCompact::MergeTreeDataPartCompact(
 {
 }
 
+// 
 IMergeTreeDataPart::MergeTreeReaderPtr MergeTreeDataPartCompact::getReader(
     const NamesAndTypesList & columns_to_read,
     const StorageSnapshotPtr & storage_snapshot,

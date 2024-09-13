@@ -127,7 +127,7 @@ public:
         return nullptr;
     }
 
-    // 
+    // 似乎是执行完subtasks中的一次，就会返回
     bool execute();
 
 private:
@@ -148,6 +148,7 @@ private:
     /// By default this context is uninitialized, but some variables has to be set after construction,
     /// some variables are used in a process of execution
     /// Proper initialization is responsibility of the author
+    //
     struct GlobalRuntimeContext : public IStageRuntimeContext
     {
         MergeList::Entry * merge_entry{nullptr};
@@ -185,7 +186,8 @@ private:
         std::unique_ptr<MergeStageProgress> horizontal_stage_progress{nullptr};
         std::unique_ptr<MergeStageProgress> column_progress{nullptr};
 
-        std::shared_ptr<MergedBlockOutputStream> to{nullptr};
+        // shared_ptr<MergedBlockOutputStream> to
+        std::shared_ptr<MergedBlockOutputStream> to{nullptr};  //
         QueryPipeline merged_pipeline;
         std::unique_ptr<PullingPipelineExecutor> merging_executor;
 
@@ -270,7 +272,7 @@ private:
         void createMergedStream();
         void extractMergingAndGatheringColumns() const;
 
-        void setRuntimeContext(StageRuntimeContextPtr local, StageRuntimeContextPtr global) override
+        void setRuntimeContext(StageRuntimeContextPtr local, StageRuntimeContextPtr global) override  //
         {
             ctx = static_pointer_cast<ExecuteAndFinalizeHorizontalPartRuntimeContext>(local);
             global_ctx = static_pointer_cast<GlobalRuntimeContext>(global);
@@ -307,14 +309,14 @@ private:
         State vertical_merge_one_column_state{State::NEED_PREPARE};
 
         Float64 progress_before = 0;
-        std::unique_ptr<MergedColumnOnlyOutputStream> column_to{nullptr};
+        std::unique_ptr<MergedColumnOnlyOutputStream> column_to{nullptr};    //
         std::optional<Pipe> prepared_pipe;
         size_t max_delayed_streams = 0;
         bool use_prefetch = false;
         std::list<std::unique_ptr<MergedColumnOnlyOutputStream>> delayed_streams;
         size_t column_elems_written{0};
         QueryPipeline column_parts_pipeline;
-        std::unique_ptr<PullingPipelineExecutor> executor;
+        std::unique_ptr<PullingPipelineExecutor> executor;   //
 
         // rows_sources_read_buf
         std::unique_ptr<CompressedReadBufferFromFile> rows_sources_read_buf{nullptr};
@@ -419,6 +421,7 @@ private:
 
     Stages::const_iterator stages_iterator = stages.begin();
 
+    // 。。。
     static bool enabledBlockNumberColumn(GlobalRuntimeContextPtr global_ctx);
     static bool enabledBlockOffsetColumn(GlobalRuntimeContextPtr global_ctx);
 

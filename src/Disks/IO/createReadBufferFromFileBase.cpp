@@ -87,7 +87,7 @@ std::unique_ptr<ReadBufferFromFileBase> createReadBufferFromFileBase(
                 settings.local_throttler);
         }
         else if (settings.local_fs_method == LocalFSReadMethod::pread || settings.local_fs_method == LocalFSReadMethod::mmap)
-        {
+        {  // MergeTreeSequentialSource用的好像是pread. 在MergeTreeSequentialSource中： read_settings.local_fs_method = LocalFSReadMethod::pread;
             res = std::make_unique<ReadBufferFromFilePReadWithDescriptorsCache>(
                 filename,
                 buffer_size,
